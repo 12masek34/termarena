@@ -5,6 +5,7 @@ mod network;
 mod server;
 mod client;
 mod utils;
+mod map;
 
 
 #[tokio::main]
@@ -24,7 +25,7 @@ async fn main() {
             match server::run_server(&port).await {
                 Ok(external_ip) => {
                     println!("Игра создана! Ваш внешний адрес: {}:{}", external_ip, port);
-                    client::run_client(&format!("127.0.0.1:{}", port)).await;
+                    let _ = client::run_client(&format!("127.0.0.1:{}", port)).await;
                 },
                 Err(e) => eprintln!("Ошибка запуска сервера: {}", e),
             }
@@ -34,7 +35,7 @@ async fn main() {
                 eprintln!("Необходимо указать адрес сервера: join <ip:port>");
             }
             let addr = &args[2];
-            client::run_client(addr).await;
+            let _ = client::run_client(addr).await;
         },
         _ => eprintln!("Неизвестный режим: {}", args[1]),
     }
