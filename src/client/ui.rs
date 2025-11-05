@@ -1,5 +1,22 @@
 use super::ClientState;
-use std::io::Write;
+use crossterm::{
+    cursor::{Hide, MoveTo, Show},
+    terminal::{EnterAlternateScreen, LeaveAlternateScreen},
+    ExecutableCommand,
+};
+use std::io::{stdout, Write};
+
+pub fn start_game_screen() {
+    let mut stdout = stdout();
+    stdout.execute(EnterAlternateScreen).unwrap();
+    stdout.execute(Hide).unwrap();
+}
+
+pub fn end_game_screen() {
+    let mut stdout = stdout();
+    stdout.execute(Show).unwrap();
+    stdout.execute(LeaveAlternateScreen).unwrap();
+}
 
 pub fn render(state: &ClientState) {
     let mut frame = String::new();

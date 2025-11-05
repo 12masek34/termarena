@@ -6,13 +6,16 @@ use crate::map::Map;
 use crate::network::receive_map;
 use std::time::Duration;
 use tokio::time::sleep;
+use tokio::signal;
 
 
 pub struct ClientState {
     pub map: Map,
     pub player_x: usize,
     pub player_y: usize,
+    pub running: bool,
 }
+
 
 impl ClientState {
     pub fn new(map: Map) -> Self {
@@ -32,6 +35,7 @@ impl ClientState {
             map,
             player_x: spawn_x,
             player_y: spawn_y,
+            running: true,
         }
     }
 
@@ -52,16 +56,26 @@ pub async fn run_client(addr: &str) -> Result<(), Box<dyn std::error::Error>> {
     println!("Карта получена: {}x{}", map.width, map.height);
 
     let mut state = ClientState::new(map);
+
     run_game_loop(&mut state).await;
 
     Ok(())
 }
 
-async fn run_game_loop(state: &ClientState) {
-    loop {
-        print!("\x1B[2J\x1B[H");
 
-        ui::render(&state);
-        sleep(Duration::from_millis(500)).await;
+pub async fn run_game_loop(state: &mut ClientState) {
+    ui::start_game_screen();
+
+    tokio::select! {
+        _ = async {
+            while state.running {
+                ui::render(state);
+                sleep(Duration::from_millis(50)).await;
+            }
+        } => {},
+        _ = signal::ctrl_c() => {
+            state.running = false;
+        }
     }
+    ui::end_game_screen();
 }
