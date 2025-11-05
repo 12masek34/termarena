@@ -1,7 +1,9 @@
-use tokio::{net::{TcpListener, TcpStream}, io::AsyncWriteExt};
-use crate::{network, utils};
 use crate::map::Map;
-
+use crate::{network, utils};
+use tokio::{
+    io::AsyncWriteExt,
+    net::{TcpListener, TcpStream},
+};
 
 pub async fn run_server(port: &str) -> Result<String, Box<dyn std::error::Error>> {
     let listener = TcpListener::bind(format!("0.0.0.0:{}", port)).await?;

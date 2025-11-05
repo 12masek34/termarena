@@ -1,13 +1,12 @@
 pub mod ui;
 
-use tokio::io::AsyncReadExt;
-use tokio::net::TcpStream;
 use crate::map::Map;
 use crate::network::receive_map;
 use std::time::Duration;
-use tokio::time::sleep;
+use tokio::io::AsyncReadExt;
+use tokio::net::TcpStream;
 use tokio::signal;
-
+use tokio::time::sleep;
 
 pub struct ClientState {
     pub map: Map,
@@ -16,14 +15,13 @@ pub struct ClientState {
     pub running: bool,
 }
 
-
 impl ClientState {
     pub fn new(map: Map) -> Self {
         let mut spawn_x = 1;
         let mut spawn_y = 1;
 
         for y in 1..map.height {
-            for  x in 1..map.width {
+            for x in 1..map.width {
                 if map.tiles[y][x] == crate::map::EMPTY {
                     spawn_x = x;
                     spawn_y = y;
@@ -38,18 +36,16 @@ impl ClientState {
             running: true,
         }
     }
-
 }
-
 
 pub async fn run_client(addr: &str) -> Result<(), Box<dyn std::error::Error>> {
     let mut stream = match TcpStream::connect(addr).await {
-    Ok(s) => s,
-    Err(e) => {
-        eprintln!("Ошибка подключения к серверу {}: {}", addr, e);
-        return Err(Box::new(e));
-    }
-};
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("Ошибка подключения к серверу {}: {}", addr, e);
+            return Err(Box::new(e));
+        }
+    };
     println!("Подключено к серверу {}", addr);
 
     let map = receive_map(&mut stream).await?;
@@ -61,7 +57,6 @@ pub async fn run_client(addr: &str) -> Result<(), Box<dyn std::error::Error>> {
 
     Ok(())
 }
-
 
 pub async fn run_game_loop(state: &mut ClientState) {
     ui::start_game_screen();

@@ -1,10 +1,10 @@
 use super::ClientState;
 use crossterm::{
+    ExecutableCommand,
     cursor::{Hide, MoveTo, Show},
     terminal::{EnterAlternateScreen, LeaveAlternateScreen},
-    ExecutableCommand,
 };
-use std::io::{stdout, Write};
+use std::io::{Write, stdout};
 
 pub fn start_game_screen() {
     let mut stdout = stdout();

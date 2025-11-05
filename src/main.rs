@@ -1,12 +1,11 @@
 use std::env;
 
+mod client;
 mod game;
+mod map;
 mod network;
 mod server;
-mod client;
 mod utils;
-mod map;
-
 
 #[tokio::main]
 async fn main() {
@@ -26,17 +25,17 @@ async fn main() {
                 Ok(external_ip) => {
                     println!("Игра создана! Ваш внешний адрес: {}:{}", external_ip, port);
                     let _ = client::run_client(&format!("127.0.0.1:{}", port)).await;
-                },
+                }
                 Err(e) => eprintln!("Ошибка запуска сервера: {}", e),
             }
-        },
+        }
         "join" => {
             if args.len() < 3 {
                 eprintln!("Необходимо указать адрес сервера: join <ip:port>");
             }
             let addr = &args[2];
             let _ = client::run_client(addr).await;
-        },
+        }
         _ => eprintln!("Неизвестный режим: {}", args[1]),
     }
 }

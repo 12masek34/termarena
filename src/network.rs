@@ -1,4 +1,3 @@
-
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::TcpStream,
@@ -6,12 +5,11 @@ use tokio::{
 
 use crate::map::Map;
 
-
 pub async fn send_data<T: serde::Serialize>(
     socket: &mut tokio::net::TcpStream,
     data: &T,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let encoded =bincode::serialize(data)?;
+    let encoded = bincode::serialize(data)?;
     let len = encoded.len() as u32;
 
     socket.write_all(&len.to_be_bytes()).await?;
