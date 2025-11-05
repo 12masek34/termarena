@@ -39,7 +39,13 @@ impl ClientState {
 
 
 pub async fn run_client(addr: &str) -> Result<(), Box<dyn std::error::Error>> {
-    let mut stream = TcpStream::connect(addr).await?;
+    let mut stream = match TcpStream::connect(addr).await {
+    Ok(s) => s,
+    Err(e) => {
+        eprintln!("Ошибка подключения к серверу {}: {}", addr, e);
+        return Err(Box::new(e));
+    }
+};
     println!("Подключено к серверу {}", addr);
 
     let map = receive_map(&mut stream).await?;

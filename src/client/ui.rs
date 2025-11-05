@@ -1,19 +1,26 @@
 use super::ClientState;
+use std::io::Write;
 
 pub fn render(state: &ClientState) {
-    let map = &state.map;
+    let mut frame = String::new();
 
-    for (y, row) in map.tiles.iter().enumerate() {
+    for (y, row) in state.map.tiles.iter().enumerate() {
         for (x, ch) in row.iter().enumerate() {
             if x == state.player_x && y == state.player_y {
-                print!("@");
+                frame.push('@');
             } else {
-                print!("{}", ch);
+                frame.push(*ch);
             }
         }
-        println!();
+        frame.push('\n');
     }
 
-    println!();
-    println!("Позиция игрока: {} {}", state.player_x, state.player_y);
+    frame.push_str(&format!(
+        "\nПозиция игрока: {} {}\n",
+        state.player_x, state.player_y
+    ));
+
+    print!("\x1B[H");
+    print!("{}", frame);
+    std::io::stdout().flush().unwrap();
 }
