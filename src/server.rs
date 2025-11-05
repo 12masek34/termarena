@@ -1,5 +1,5 @@
 use tokio::{net::{TcpListener, TcpStream}, io::AsyncWriteExt};
-use crate::utils;
+use crate::{network, utils};
 use crate::map::Map;
 
 
@@ -21,8 +21,7 @@ pub async fn run_server(port: &str) -> Result<String, Box<dyn std::error::Error>
         let encoded = bincode::serialize(&map)?;
         let len = encoded.len() as u32;
 
-        socket.write_all(&len.to_be_bytes()).await?;
-        socket.write_all(&encoded).await?;
+        network::send_data(&mut socket, &map).await?;
         println!("Карта отправлена клиенту {:?} байт", len);
     }
 }
