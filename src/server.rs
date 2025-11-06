@@ -45,12 +45,7 @@ async fn handle_client(
     _tx: tokio::sync::broadcast::Sender<String>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     network::send_map(socket, &*map).await?;
-    println!(
-        "Карта отправлена клиенту ({:?} байт)",
-        bincode::serialized_size(&*map)?
-    );
 
-    // тут буде рассылка состояния и получение действий от игрока
     loop {
         // Можно здесь делать рассылку состояния или просто спать
         // чтобы не нагружать CPU

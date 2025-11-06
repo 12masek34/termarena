@@ -30,6 +30,11 @@ pub async fn send_map(
     let server_message = ServerMessage::Map(map.clone());
     send_data(socket, &server_message).await?;
 
+    println!(
+        "Карта отправлена клиенту ({:?} байт)",
+        bincode::serialized_size(&*map)?
+    );
+
     Ok(())
 }
 

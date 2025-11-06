@@ -2,11 +2,8 @@ pub mod ui;
 
 use crate::map::Map;
 use crate::network::{ServerMessage, receive_message};
-use std::time::Duration;
-use tokio::io::AsyncReadExt;
 use tokio::net::TcpStream;
 use tokio::signal;
-use tokio::time::sleep;
 
 pub struct ClientState {
     pub map: Option<Map>,
@@ -54,7 +51,6 @@ pub async fn run_game_loop(state: &mut ClientState, stream: &mut TcpStream) {
             res = receive_message(stream) => {
                 match res {
                     Ok(message) => {
-                        // Обрабатываем сообщение
                         match message {
                             ServerMessage::Map(map) => {
                                 state.set_map(map);
