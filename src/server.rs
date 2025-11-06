@@ -3,12 +3,8 @@ use crate::map::Map;
 use crate::network::{ServerMessage, send_data};
 use crate::{network, utils};
 use ::std::sync::Arc;
-use serde::Serialize;
-use std::net::SocketAddr;
 use tokio::sync::{Mutex, broadcast};
-use tokio::time::{Duration, sleep};
 use tokio::{
-    io::AsyncWriteExt,
     net::{TcpListener, TcpStream},
 };
 
@@ -48,7 +44,7 @@ pub async fn run_server(port: &str) -> Result<String, Box<dyn std::error::Error>
 }
 
 async fn handle_client(
-    socket: Arc<Mutex<tokio::net::TcpStream>>,
+    socket: Arc<Mutex<TcpStream>>,
     map: Arc<Map>,
     game_state: Arc<Mutex<GameState>>,
     tx: tokio::sync::broadcast::Sender<ServerMessage>,
