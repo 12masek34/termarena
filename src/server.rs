@@ -1,5 +1,7 @@
 use crate::map::Map;
 use crate::{network, utils};
+use ::std::sync::Arc;
+use tokio::sync::broadcast;
 use tokio::{
     io::AsyncWriteExt,
     net::{TcpListener, TcpStream},
@@ -16,17 +18,38 @@ pub async fn run_server(port: &str) -> Result<String, Box<dyn std::error::Error>
         extermal_id, port, internal_id, port
     );
 
-    let map = Map::new(40, 40);
+    let map = Arc::new(Map::new(40, 40));
     println!("Карта создана");
+
+    let (tx, _rx) = broadcast::channel::<String>(16);
 
     loop {
         let (mut socket, addr) = listener.accept().await?;
         println!("Новый игрок подключился: {}", addr);
 
-        let encoded = bincode::serialize(&map)?;
-        let len = encoded.len() as u32;
+        let map_clone = Arc::clone(&map);
+        let tx_clone = tx.clone();
 
-        network::send_data(&mut socket, &map).await?;
-        println!("Карта отправлена клиенту {:?} байт", len);
+        tokio::spawn(async move {
+            if let Err(e) = handle_client(&mut socket, map_clone, tx_clone).await {
+                eprintln!("Ошибка при обработке клиента {}: {}", addr, e);
+            }
+        });
     }
+}
+
+async fn handle_client(
+    socket: &mut tokio::net::TcpStream,
+    map: Arc<Map>,
+    _tx: tokio::sync::broadcast::Sender<String>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    network::send_data(socket, &*map).await?;
+    println!(
+        "Карта отправлена клиенту ({:?} байт)",
+        bincode::serialized_size(&*map)?
+    );
+
+    // тут буде рассылка состояния и получение действий от игрока
+
+    Ok(())
 }
