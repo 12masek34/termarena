@@ -1,9 +1,15 @@
+use serde::{Deserialize, Serialize};
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::TcpStream,
 };
 
 use crate::map::Map;
+
+#[derive(Clone, Serialize, Deserialize, Debug)]
+pub enum ServerMessage {
+    Map(Map),
+}
 
 pub async fn send_data<T: serde::Serialize>(
     socket: &mut tokio::net::TcpStream,
@@ -14,6 +20,16 @@ pub async fn send_data<T: serde::Serialize>(
 
     socket.write_all(&len.to_be_bytes()).await?;
     socket.write_all(&encoded).await?;
+    Ok(())
+}
+
+pub async fn send_map(
+    socket: &mut tokio::net::TcpStream,
+    map: &Map,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let server_message = ServerMessage::Map(map.clone());
+    send_data(socket, &server_message).await?;
+
     Ok(())
 }
 
@@ -30,6 +46,10 @@ pub async fn receive_data(stream: &mut TcpStream) -> Result<Vec<u8>, Box<dyn std
 
 pub async fn receive_map(stream: &mut TcpStream) -> Result<Map, Box<dyn std::error::Error>> {
     let data = receive_data(stream).await?;
-    let map: Map = bincode::deserialize(&data)?;
-    Ok(map)
+    let server_message: ServerMessage = bincode::deserialize(&data)?;
+
+    match server_message {
+        ServerMessage::Map(map) => Ok(map),
+        _ => Err("Неизвестный тип сообщения от сервера".into()),
+    }
 }

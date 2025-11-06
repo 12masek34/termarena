@@ -43,7 +43,7 @@ async fn handle_client(
     map: Arc<Map>,
     _tx: tokio::sync::broadcast::Sender<String>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    network::send_data(socket, &*map).await?;
+    network::send_map(socket, &*map).await?;
     println!(
         "Карта отправлена клиенту ({:?} байт)",
         bincode::serialized_size(&*map)?
