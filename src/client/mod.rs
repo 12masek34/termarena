@@ -54,7 +54,6 @@ pub async fn run_game_loop(state: &mut ClientState, stream: &mut TcpStream) {
                         match message {
                             ServerMessage::Map(map) => {
                                 state.set_map(map);
-                                println!("Карта получена");
                             },
                             // Добавляем обработку других типов сообщений
                             // ServerMessage::Chat(msg) => { ... }
