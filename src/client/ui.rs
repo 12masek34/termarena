@@ -19,6 +19,10 @@ pub fn end_game_screen() {
 }
 
 pub fn render(state: &ClientState) {
+    if !state.map.is_some() {
+        return;
+    }
+
     let mut frame = String::new();
 
     if let Some(map) = state.map.as_ref() {

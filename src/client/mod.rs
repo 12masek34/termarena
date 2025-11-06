@@ -61,9 +61,7 @@ pub async fn run_game_loop(state: &mut ClientState, stream: &mut TcpStream) {
                             // ServerMessage::PlayerUpdate(p) => { ... }
                         }
 
-                        if state.map.is_some() {
-                            ui::render(state);
-                        }
+                        ui::render(state);
                     },
                     Err(e) => {
                         if let Some(io_err) = e.downcast_ref::<std::io::Error>() {
