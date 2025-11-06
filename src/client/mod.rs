@@ -10,6 +10,7 @@ use tokio::signal;
 
 #[derive(Debug)]
 pub struct ClientState {
+    pub id: Option<u32>,
     pub map: Option<Map>,
     pub players: HashMap<u32, Player>,
     pub running: bool,
@@ -18,6 +19,7 @@ pub struct ClientState {
 impl ClientState {
     pub fn new() -> Self {
         Self {
+            id: None,
             map: None,
             players: HashMap::new(),
             running: true,
@@ -26,6 +28,10 @@ impl ClientState {
 
     pub fn set_map(&mut self, map: Map) {
         self.map = Some(map);
+    }
+
+    pub fn set_player(&mut self, player: Player) {
+        self.id = Some(player.id)
     }
 
     pub fn set_game_state(&mut self, game_state: GameState) {
@@ -59,6 +65,9 @@ pub async fn run_game_loop(state: &mut ClientState, stream: &mut TcpStream) {
                         match message {
                             ServerMessage::Map(map) => {
                                 state.set_map(map);
+                            },
+                            ServerMessage::InitPlayer(player) => {
+                                state.set_player(player);
                             },
                             ServerMessage::GameState(game_state) => {
                                 state.set_game_state(game_state);

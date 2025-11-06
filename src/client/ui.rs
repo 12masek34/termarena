@@ -40,6 +40,11 @@ pub fn render(state: &ClientState) {
         frame.push('\n');
     }
 
+    frame.push_str(&format!(
+        "\nID: {}\n",
+        state.id.map_or("unknown".to_string(), |id| id.to_string())
+    ));
+
     print!("\x1B[H");
     print!("{}", frame);
     std::io::stdout().flush().unwrap();

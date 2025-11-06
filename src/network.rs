@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{mem::replace, sync::Arc};
 
 use serde::{Deserialize, Serialize};
 use tokio::{
@@ -7,11 +7,15 @@ use tokio::{
     sync::Mutex,
 };
 
-use crate::{game::state::GameState, map::Map};
+use crate::{
+    game::state::{GameState, Player},
+    map::Map,
+};
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub enum ServerMessage {
     Map(Map),
+    InitPlayer(Player),
     GameState(GameState),
 }
 
@@ -42,7 +46,9 @@ pub async fn send_init_state(
     );
 
     let mut state = game_state.lock().await;
-    state.create_player(&map);
+    let new_player = state.create_player(&map);
+    let server_message = ServerMessage::InitPlayer(new_player);
+    send_data(&mut socket, &server_message).await?;
     tx.send(ServerMessage::GameState(state.clone()))?;
 
     Ok(())
