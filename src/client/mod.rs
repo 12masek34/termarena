@@ -35,7 +35,6 @@ pub async fn run_client(addr: &str) -> Result<(), Box<dyn std::error::Error>> {
             return Err(Box::new(e));
         }
     };
-    println!("Подключено к серверу {}", addr);
 
     let mut state = ClientState::new();
     run_game_loop(&mut state, &mut stream).await;
