@@ -40,11 +40,6 @@ pub async fn send_init_state(
     let mut socket = socket.lock().await;
     let server_message = ServerMessage::Map(map.clone());
     send_data(&mut socket, &server_message).await?;
-    println!(
-        "Карта отправлена клиенту ({:?} байт)",
-        bincode::serialized_size(&*map)?
-    );
-
     let mut state = game_state.lock().await;
     let new_player = state.create_player(&map);
     let server_message = ServerMessage::InitPlayer(new_player);
