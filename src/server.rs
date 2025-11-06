@@ -7,11 +7,14 @@ use tokio::{
 
 pub async fn run_server(port: &str) -> Result<String, Box<dyn std::error::Error>> {
     let listener = TcpListener::bind(format!("0.0.0.0:{}", port)).await?;
-    // let extermal_id = utils::get_extermal_id().await?;
-    let extermal_id = utils::get_local_ip()
+    let extermal_id = utils::get_extermal_id().await?;
+    let internal_id = utils::get_local_ip()
         .await
         .ok_or("Не удалось определить локальный ip")?;
-    println!("Сервер слушает на {}:{}", extermal_id, port);
+    println!(
+        "Сервер запущен:\nвнутренний адрес {}:{}\nнаружний адрес {}:{}",
+        extermal_id, port, internal_id, port
+    );
 
     let map = Map::new(40, 40);
     println!("Карта создана");
