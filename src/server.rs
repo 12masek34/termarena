@@ -67,12 +67,5 @@ async fn handle_client(
             }
         }
     });
-
-    loop {
-        // Можно здесь делать рассылку состояния или просто спать
-        // чтобы не нагружать CPU
-        sleep(Duration::from_secs(1)).await;
-    }
-
     Ok(())
 }
