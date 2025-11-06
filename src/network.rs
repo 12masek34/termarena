@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use serde::{Deserialize, Serialize};
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
@@ -5,13 +7,12 @@ use tokio::{
     sync::Mutex,
 };
 
-use crate::game::state::Player;
 use crate::{game::state::GameState, map::Map};
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub enum ServerMessage {
     Map(Map),
-    Player(Player),
+    GameState(GameState),
 }
 
 pub async fn send_data<T: serde::Serialize>(
@@ -27,25 +28,22 @@ pub async fn send_data<T: serde::Serialize>(
 }
 
 pub async fn send_init_state(
-    socket: &mut tokio::net::TcpStream,
+    socket: &Arc<Mutex<tokio::net::TcpStream>>,
     map: &Map,
     game_state: &Mutex<GameState>,
+    tx: &tokio::sync::broadcast::Sender<ServerMessage>,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    let mut socket = socket.lock().await;
     let server_message = ServerMessage::Map(map.clone());
-    send_data(socket, &server_message).await?;
+    send_data(&mut socket, &server_message).await?;
     println!(
         "Карта отправлена клиенту ({:?} байт)",
         bincode::serialized_size(&*map)?
     );
 
     let mut state = game_state.lock().await;
-    let player = state.create_player(&map);
-    let server_message = ServerMessage::Player(player);
-    send_data(socket, &server_message).await?;
-    println!(
-        "Пользователь отправлен ({:?} байт)",
-        bincode::serialized_size(&*map)?
-    );
+    state.create_player(&map);
+    tx.send(ServerMessage::GameState(state.clone()))?;
 
     Ok(())
 }

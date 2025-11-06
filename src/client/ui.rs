@@ -1,7 +1,7 @@
 use super::ClientState;
 use crossterm::{
     ExecutableCommand,
-    cursor::{Hide, MoveTo, Show},
+    cursor::{Hide, Show},
     terminal::{EnterAlternateScreen, LeaveAlternateScreen},
 };
 use std::io::{Write, stdout};
@@ -19,31 +19,28 @@ pub fn end_game_screen() {
 }
 
 pub fn render(state: &ClientState) {
-    if !state.map.is_some() {
-        return;
-    }
+    let map = match &state.map {
+        Some(m) => m,
+        None => return,
+    };
 
     let mut frame = String::new();
 
-    if let Some(map) = state.map.as_ref() {
-        for (y, row) in map.tiles.iter().enumerate() {
-            for (x, ch) in row.iter().enumerate() {
-                if x == state.player_x && y == state.player_y {
-                    frame.push('@');
-                } else {
-                    frame.push(*ch);
+    for (y, row) in map.tiles.iter().enumerate() {
+        for (x, ch) in row.iter().enumerate() {
+            let mut ch_to_draw = *ch;
+            for (_, player) in state.players.iter() {
+                if player.x == x && player.y == y {
+                    ch_to_draw = '@';
+                    break;
                 }
             }
-            frame.push('\n');
+            frame.push(ch_to_draw);
         }
-
-        frame.push_str(&format!(
-            "\nПозиция игрока: {} {}\n",
-            state.player_x, state.player_y
-        ));
-
-        print!("\x1B[H");
-        print!("{}", frame);
-        std::io::stdout().flush().unwrap();
+        frame.push('\n');
     }
+
+    print!("\x1B[H");
+    print!("{}", frame);
+    std::io::stdout().flush().unwrap();
 }

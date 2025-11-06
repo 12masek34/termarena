@@ -1,17 +1,17 @@
 pub mod ui;
 
-use std::fmt::Display;
+use std::collections::HashMap;
 
-use crate::game::state::Player;
+use crate::game::state::{GameState, Player};
 use crate::map::Map;
 use crate::network::{ServerMessage, receive_message};
 use tokio::net::TcpStream;
 use tokio::signal;
 
+#[derive(Debug)]
 pub struct ClientState {
     pub map: Option<Map>,
-    pub player_x: usize,
-    pub player_y: usize,
+    pub players: HashMap<u32, Player>,
     pub running: bool,
 }
 
@@ -19,8 +19,7 @@ impl ClientState {
     pub fn new() -> Self {
         Self {
             map: None,
-            player_x: 0,
-            player_y: 0,
+            players: HashMap::new(),
             running: true,
         }
     }
@@ -29,9 +28,8 @@ impl ClientState {
         self.map = Some(map);
     }
 
-    pub fn set_player(&mut self, player: Player) {
-        self.player_x = player.x;
-        self.player_y = player.y;
+    pub fn set_game_state(&mut self, game_state: GameState) {
+        self.players = game_state.players;
     }
 }
 
@@ -62,14 +60,11 @@ pub async fn run_game_loop(state: &mut ClientState, stream: &mut TcpStream) {
                             ServerMessage::Map(map) => {
                                 state.set_map(map);
                             },
-                            ServerMessage::Player(player) => {
-                                state.set_player(player);
+                            ServerMessage::GameState(game_state) => {
+                                state.set_game_state(game_state);
                             },
-                            // Добавляем обработку других типов сообщений
-                            // ServerMessage::Chat(msg) => { ... }
-                            // ServerMessage::PlayerUpdate(p) => { ... }
                         }
-
+                        // println!("{state:?}");
                         ui::render(state);
                     },
                     Err(e) => {
