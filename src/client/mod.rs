@@ -1,7 +1,7 @@
 pub mod ui;
 
 use crate::map::Map;
-use crate::network::receive_map;
+use crate::network::{ServerMessage, receive_message};
 use std::time::Duration;
 use tokio::io::AsyncReadExt;
 use tokio::net::TcpStream;
@@ -9,32 +9,24 @@ use tokio::signal;
 use tokio::time::sleep;
 
 pub struct ClientState {
-    pub map: Map,
+    pub map: Option<Map>,
     pub player_x: usize,
     pub player_y: usize,
     pub running: bool,
 }
 
 impl ClientState {
-    pub fn new(map: Map) -> Self {
-        let mut spawn_x = 1;
-        let mut spawn_y = 1;
-
-        for y in 1..map.height {
-            for x in 1..map.width {
-                if map.tiles[y][x] == crate::map::EMPTY {
-                    spawn_x = x;
-                    spawn_y = y;
-                    break;
-                }
-            }
-        }
+    pub fn new() -> Self {
         Self {
-            map,
-            player_x: spawn_x,
-            player_y: spawn_y,
+            map: None,
+            player_x: 0,
+            player_y: 0,
             running: true,
         }
+    }
+
+    pub fn set_map(&mut self, map: Map) {
+        self.map = Some(map);
     }
 }
 
@@ -48,29 +40,52 @@ pub async fn run_client(addr: &str) -> Result<(), Box<dyn std::error::Error>> {
     };
     println!("Подключено к серверу {}", addr);
 
-    let map = receive_map(&mut stream).await?;
-    println!("Карта получена: {}x{}", map.width, map.height);
-
-    let mut state = ClientState::new(map);
-
-    run_game_loop(&mut state).await;
+    let mut state = ClientState::new();
+    run_game_loop(&mut state, &mut stream).await;
 
     Ok(())
 }
 
-pub async fn run_game_loop(state: &mut ClientState) {
+pub async fn run_game_loop(state: &mut ClientState, stream: &mut TcpStream) {
     ui::start_game_screen();
 
-    tokio::select! {
-        _ = async {
-            while state.running {
-                ui::render(state);
-                sleep(Duration::from_millis(50)).await;
+    while state.running {
+        tokio::select! {
+            res = receive_message(stream) => {
+                match res {
+                    Ok(message) => {
+                        // Обрабатываем сообщение
+                        match message {
+                            ServerMessage::Map(map) => {
+                                state.set_map(map);
+                                println!("Карта получена");
+                            },
+                            // Добавляем обработку других типов сообщений
+                            // ServerMessage::Chat(msg) => { ... }
+                            // ServerMessage::PlayerUpdate(p) => { ... }
+                        }
+
+                        if state.map.is_some() {
+                            ui::render(state);
+                        }
+                    },
+                    Err(e) => {
+                        if let Some(io_err) = e.downcast_ref::<std::io::Error>() {
+                            if io_err.kind() == std::io::ErrorKind::UnexpectedEof {
+                                println!("Сервер закрыл соединение");
+                                state.running = false;
+                                break;
+                            }
+                        }
+                        eprintln!("Ошибка приёма сообщения: {}", e);
+                    }
+                }
+            },
+            _ = signal::ctrl_c() => {
+                state.running = false;
             }
-        } => {},
-        _ = signal::ctrl_c() => {
-            state.running = false;
         }
     }
+
     ui::end_game_screen();
 }

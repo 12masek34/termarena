@@ -2,6 +2,7 @@ use crate::map::Map;
 use crate::{network, utils};
 use ::std::sync::Arc;
 use tokio::sync::broadcast;
+use tokio::time::{Duration, sleep};
 use tokio::{
     io::AsyncWriteExt,
     net::{TcpListener, TcpStream},
@@ -50,6 +51,11 @@ async fn handle_client(
     );
 
     // тут буде рассылка состояния и получение действий от игрока
+    loop {
+        // Можно здесь делать рассылку состояния или просто спать
+        // чтобы не нагружать CPU
+        sleep(Duration::from_secs(1)).await;
+    }
 
     Ok(())
 }
