@@ -1,7 +1,8 @@
+use crate::game::state::GameState;
 use crate::map::Map;
 use crate::{network, utils};
 use ::std::sync::Arc;
-use tokio::sync::broadcast;
+use tokio::sync::{Mutex, broadcast};
 use tokio::time::{Duration, sleep};
 use tokio::{
     io::AsyncWriteExt,
@@ -20,6 +21,7 @@ pub async fn run_server(port: &str) -> Result<String, Box<dyn std::error::Error>
     );
 
     let map = Arc::new(Map::new(40, 40));
+    let game_state = Arc::new(Mutex::new(GameState::new()));
     println!("Карта создана");
 
     let (tx, _rx) = broadcast::channel::<String>(16);
@@ -29,10 +31,12 @@ pub async fn run_server(port: &str) -> Result<String, Box<dyn std::error::Error>
         println!("Новый игрок подключился: {}", addr);
 
         let map_clone = Arc::clone(&map);
+        let game_state_clone = Arc::clone(&game_state);
         let tx_clone = tx.clone();
 
         tokio::spawn(async move {
-            if let Err(e) = handle_client(&mut socket, map_clone, tx_clone).await {
+            if let Err(e) = handle_client(&mut socket, map_clone, game_state_clone, tx_clone).await
+            {
                 eprintln!("Ошибка при обработке клиента {}: {}", addr, e);
             }
         });
@@ -42,9 +46,10 @@ pub async fn run_server(port: &str) -> Result<String, Box<dyn std::error::Error>
 async fn handle_client(
     socket: &mut tokio::net::TcpStream,
     map: Arc<Map>,
+    game_state: Arc<Mutex<GameState>>,
     _tx: tokio::sync::broadcast::Sender<String>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    network::send_map(socket, &*map).await?;
+    network::send_init_state(socket, &*map, &*game_state).await?;
 
     loop {
         // Можно здесь делать рассылку состояния или просто спать

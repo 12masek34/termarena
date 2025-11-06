@@ -1,5 +1,8 @@
 pub mod ui;
 
+use std::fmt::Display;
+
+use crate::game::state::Player;
 use crate::map::Map;
 use crate::network::{ServerMessage, receive_message};
 use tokio::net::TcpStream;
@@ -24,6 +27,11 @@ impl ClientState {
 
     pub fn set_map(&mut self, map: Map) {
         self.map = Some(map);
+    }
+
+    pub fn set_player(&mut self, player: Player) {
+        self.player_x = player.x;
+        self.player_y = player.y;
     }
 }
 
@@ -53,6 +61,9 @@ pub async fn run_game_loop(state: &mut ClientState, stream: &mut TcpStream) {
                         match message {
                             ServerMessage::Map(map) => {
                                 state.set_map(map);
+                            },
+                            ServerMessage::Player(player) => {
+                                state.set_player(player);
                             },
                             // Добавляем обработку других типов сообщений
                             // ServerMessage::Chat(msg) => { ... }

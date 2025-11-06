@@ -2,13 +2,16 @@ use serde::{Deserialize, Serialize};
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::TcpStream,
+    sync::Mutex,
 };
 
-use crate::map::Map;
+use crate::game::state::Player;
+use crate::{game::state::GameState, map::Map};
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub enum ServerMessage {
     Map(Map),
+    Player(Player),
 }
 
 pub async fn send_data<T: serde::Serialize>(
@@ -23,15 +26,24 @@ pub async fn send_data<T: serde::Serialize>(
     Ok(())
 }
 
-pub async fn send_map(
+pub async fn send_init_state(
     socket: &mut tokio::net::TcpStream,
     map: &Map,
+    game_state: &Mutex<GameState>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let server_message = ServerMessage::Map(map.clone());
     send_data(socket, &server_message).await?;
-
     println!(
         "Карта отправлена клиенту ({:?} байт)",
+        bincode::serialized_size(&*map)?
+    );
+
+    let mut state = game_state.lock().await;
+    let player = state.create_player(&map);
+    let server_message = ServerMessage::Player(player);
+    send_data(socket, &server_message).await?;
+    println!(
+        "Пользователь отправлен ({:?} байт)",
         bincode::serialized_size(&*map)?
     );
 
@@ -50,13 +62,3 @@ pub async fn receive_message(
 
     Ok(server_message)
 }
-
-// pub async fn receive_map(stream: &mut TcpStream) -> Result<Map, Box<dyn std::error::Error>> {
-//     let data = receive_data(stream).await?;
-//     let server_message: ServerMessage = bincode::deserialize(&data)?;
-
-//     match server_message {
-//         ServerMessage::Map(map) => Ok(map),
-//         _ => Err("Неизвестный тип сообщения от сервера".into()),
-//     }
-// }
