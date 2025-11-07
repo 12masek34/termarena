@@ -90,7 +90,6 @@ impl ClientState {
 
         let mut frame = frame_rows.join("\n");
 
-        // Статус игрока
         frame.push_str(&format!(
             "\nYou: {}\nPosition: ({},{})\nPlayers nearby: {}\nMap size: {}x{}\n",
             self.id.unwrap_or(0),
