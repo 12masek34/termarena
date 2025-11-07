@@ -27,16 +27,26 @@ pub async fn handle_input(
             }
 
             let direction = match code {
-                KeyCode::Up | KeyCode::Char('w') | KeyCode::Char('W') => Some(state::Direction::Up),
-                KeyCode::Down | KeyCode::Char('s') | KeyCode::Char('S') => {
-                    Some(state::Direction::Down)
-                }
-                KeyCode::Left | KeyCode::Char('a') | KeyCode::Char('A') => {
-                    Some(state::Direction::Left)
-                }
-                KeyCode::Right | KeyCode::Char('d') | KeyCode::Char('D') => {
-                    Some(state::Direction::Right)
-                }
+                KeyCode::Up
+                | KeyCode::Char('w')
+                | KeyCode::Char('W')
+                | KeyCode::Char('k')
+                | KeyCode::Char('K') => Some(state::Direction::Up),
+                KeyCode::Down
+                | KeyCode::Char('s')
+                | KeyCode::Char('S')
+                | KeyCode::Char('j')
+                | KeyCode::Char('J') => Some(state::Direction::Down),
+                KeyCode::Left
+                | KeyCode::Char('a')
+                | KeyCode::Char('A')
+                | KeyCode::Char('h')
+                | KeyCode::Char('H') => Some(state::Direction::Left),
+                KeyCode::Right
+                | KeyCode::Char('d')
+                | KeyCode::Char('D')
+                | KeyCode::Char('l')
+                | KeyCode::Char('L') => Some(state::Direction::Right),
                 _ => None,
             };
 

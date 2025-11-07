@@ -48,19 +48,16 @@ impl GameState {
 
     pub fn move_player(&mut self, player_id: u32, direction: Direction, map: &Map) {
         if let Some(player) = self.players.get_mut(&player_id) {
-            match direction {
-                Direction::Up => {
-                    player.y = player.y.saturating_sub(1);
-                }
-                Direction::Down => {
-                    player.y = (player.y + 1).min(map.height - 1);
-                }
-                Direction::Left => {
-                    player.x = player.x.saturating_sub(1);
-                }
-                Direction::Right => {
-                    player.x = (player.x + 1).min(map.width - 1);
-                }
+            let (new_x, new_y) = match direction {
+                Direction::Up => (player.x, player.y.saturating_sub(1)),
+                Direction::Down => (player.x, (player.y + 1).min(map.height - 1)),
+                Direction::Left => (player.x.saturating_sub(1), player.y),
+                Direction::Right => ((player.x + 1).min(map.width - 1), player.y),
+            };
+
+            if map.is_walkable(new_x, new_y) {
+                player.x = new_x;
+                player.y = new_y;
             }
         }
     }
