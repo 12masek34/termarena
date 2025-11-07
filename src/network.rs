@@ -1,6 +1,6 @@
-use std::{mem::replace, sync::Arc};
+use std::sync::Arc;
 
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::TcpStream,
@@ -8,7 +8,7 @@ use tokio::{
 };
 
 use crate::{
-    game::state::{GameState, Player},
+    game::state::{Direction, GameState, Player},
     map::Map,
 };
 
@@ -19,45 +19,57 @@ pub enum ServerMessage {
     GameState(GameState),
 }
 
-pub async fn send_data<T: serde::Serialize>(
-    socket: &mut tokio::net::TcpStream,
-    data: &T,
-) -> Result<(), Box<dyn std::error::Error>> {
-    let encoded = bincode::serialize(data)?;
-    let len = encoded.len() as u32;
-
-    socket.write_all(&len.to_be_bytes()).await?;
-    socket.write_all(&encoded).await?;
-    Ok(())
+#[derive(Clone, Serialize, Deserialize, Debug)]
+pub enum ClientMessage {
+    Move(Direction),
+    Quit,
 }
 
 pub async fn send_init_state(
-    socket: &Arc<Mutex<tokio::net::TcpStream>>,
+    socket: &Arc<Mutex<tokio::io::WriteHalf<TcpStream>>>,
     map: &Map,
     game_state: &Mutex<GameState>,
     tx: &tokio::sync::broadcast::Sender<ServerMessage>,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Result<u32, Box<dyn std::error::Error>> {
     let mut socket = socket.lock().await;
     let server_message = ServerMessage::Map(map.clone());
-    send_data(&mut socket, &server_message).await?;
+    send_message(&mut socket, &server_message).await?;
     let mut state = game_state.lock().await;
     let new_player = state.create_player(&map);
+    let id = new_player.id;
     let server_message = ServerMessage::InitPlayer(new_player);
-    send_data(&mut socket, &server_message).await?;
+    send_message(&mut socket, &server_message).await?;
     tx.send(ServerMessage::GameState(state.clone()))?;
 
+    Ok(id)
+}
+
+pub async fn send_message<T>(
+    stream: &mut tokio::io::WriteHalf<TcpStream>,
+    message: &T,
+) -> Result<(), Box<dyn std::error::Error>>
+where
+    T: serde::Serialize,
+{
+    let data = bincode::serialize(message)?;
+    let len = data.len() as u32;
+    stream.write_all(&len.to_be_bytes()).await?;
+    stream.write_all(&data).await?;
+    stream.flush().await?;
     Ok(())
 }
 
-pub async fn receive_message(
-    stream: &mut TcpStream,
-) -> Result<ServerMessage, Box<dyn std::error::Error>> {
+pub async fn receive_message<T>(
+    stream: &mut tokio::io::ReadHalf<TcpStream>,
+) -> Result<T, Box<dyn std::error::Error>>
+where
+    T: DeserializeOwned,
+{
     let mut len_buf = [0u8; 4];
     stream.read_exact(&mut len_buf).await?;
     let len = u32::from_be_bytes(len_buf) as usize;
-    let mut data = vec![0u8; len];
-    stream.read_exact(&mut data).await?;
-    let server_message: ServerMessage = bincode::deserialize(&data)?;
-
-    Ok(server_message)
+    let mut buf = vec![0u8; len];
+    stream.read_exact(&mut buf).await?;
+    let message: T = bincode::deserialize(&buf)?;
+    Ok(message)
 }

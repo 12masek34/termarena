@@ -1,12 +1,10 @@
 use crate::game::state::GameState;
 use crate::map::Map;
-use crate::network::{ServerMessage, send_data};
+use crate::network::{ClientMessage, ServerMessage, receive_message, send_message};
 use crate::{network, utils};
 use ::std::sync::Arc;
+use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::{Mutex, broadcast};
-use tokio::{
-    net::{TcpListener, TcpStream},
-};
 
 pub async fn run_server(port: &str) -> Result<String, Box<dyn std::error::Error>> {
     let listener = TcpListener::bind(format!("0.0.0.0:{}", port)).await?;
@@ -27,7 +25,6 @@ pub async fn run_server(port: &str) -> Result<String, Box<dyn std::error::Error>
 
     loop {
         let (mut socket, addr) = listener.accept().await?;
-        let socket = Arc::new(Mutex::new(socket));
         println!("Новый игрок подключился: {}", addr);
 
         let map_clone = Arc::clone(&map);
@@ -44,24 +41,48 @@ pub async fn run_server(port: &str) -> Result<String, Box<dyn std::error::Error>
 }
 
 async fn handle_client(
-    socket: Arc<Mutex<TcpStream>>,
+    socket: TcpStream,
     map: Arc<Map>,
     game_state: Arc<Mutex<GameState>>,
     tx: tokio::sync::broadcast::Sender<ServerMessage>,
     mut rx: tokio::sync::broadcast::Receiver<ServerMessage>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    network::send_init_state(&socket, &*map, &*game_state, &tx).await?;
+    let (reader, writer) = tokio::io::split(socket);
+    let reader = Arc::new(Mutex::new(reader));
+    let writer = Arc::new(Mutex::new(writer));
 
+    let player_id = network::send_init_state(&writer, &*map, &*game_state, &tx).await?;
     tokio::spawn(async move {
         loop {
-            let mut sock = socket.lock().await;
             if let Ok(server_message) = rx.recv().await {
-                if let Err(e) = send_data(&mut *sock, &server_message).await {
+                let mut write_guard = writer.lock().await;
+                if let Err(e) = send_message(&mut *write_guard, &server_message).await {
                     eprintln!("Ошибка при отправке сообщения клиенту: {:?}", e);
                     break;
                 }
             }
         }
     });
+
+    loop {
+        let client_message = {
+            let mut reader_guard = reader.lock().await;
+            match receive_message(&mut *reader_guard).await {
+                Ok(m) => m,
+                Err(e) => {
+                    eprintln!("Ошибка при получении сообщения от клиента: {:?}", e);
+                    break;
+                }
+            }
+        };
+        println!("{:?}", client_message);
+        match client_message {
+            ClientMessage::Move(direction) => {
+                println!("Direction {:?}", direction);
+            }
+            ClientMessage::Quit => break,
+        }
+    }
+
     Ok(())
 }

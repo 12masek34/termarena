@@ -11,6 +11,14 @@ pub struct Player {
     pub y: usize,
 }
 
+#[derive(Clone, Serialize, Deserialize, Debug)]
+pub enum Direction {
+    Up,
+    Down,
+    Left,
+    Right,
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct GameState {
     pub players: HashMap<u32, Player>,
