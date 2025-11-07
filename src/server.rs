@@ -13,7 +13,7 @@ pub async fn run_server(port: &str) -> Result<String, Box<dyn std::error::Error>
         .await
         .ok_or("Не удалось определить локальный ip")?;
     println!(
-        "Сервер запущен:\nвнутренний адрес {}:{}\nнаружний адрес {}:{}",
+        "Сервер запущен\nвнутренний адрес {}:{}\nнаружний адрес {}:{}",
         extermal_id, port, internal_id, port
     );
 
