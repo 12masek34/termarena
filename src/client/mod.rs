@@ -114,20 +114,27 @@ pub async fn run_client(addr: &str) -> Result<(), Box<dyn std::error::Error>> {
         }
     };
 
-    let mut state = ClientState::new();
-    run_game_loop(&mut state, stream).await;
+    let state = ClientState::new();
+    run_game_loop(state, stream).await;
 
     Ok(())
 }
 
-pub async fn run_game_loop(state: &mut ClientState, stream: TcpStream) {
+pub async fn run_game_loop(state: ClientState, stream: TcpStream) {
     ui::start_game_screen();
+    let state = Arc::new(Mutex::new(state));
     let (reader, writer) = tokio::io::split(stream);
     let reader = Arc::new(Mutex::new(reader));
     let writer = Arc::new(Mutex::new(writer));
+
     let mut input_task: Option<JoinHandle<()>> = None;
 
-    while state.running {
+    loop {
+        let running = { state.lock().await.running };
+        if !running {
+            break;
+        }
+
         tokio::select! {
             res = async {
                 let mut reader_guard = reader.lock().await;
@@ -135,26 +142,27 @@ pub async fn run_game_loop(state: &mut ClientState, stream: TcpStream) {
             }.fuse() => {
                 match res {
                     Ok(message) => {
+                        let mut state_guard = state.lock().await;
                         match message {
-                            ServerMessage::Map(map) => state.set_map(map),
+                            ServerMessage::Map(map) => state_guard.set_map(map),
                             ServerMessage::InitPlayer(player) => {
-                                state.set_player(player);
+                                state_guard.set_player(player);
                                 if input_task.is_none() {
                                     let writer_clone = Arc::clone(&writer);
+                                    let state_clone = Arc::clone(&state);
                                     input_task = Some(tokio::spawn(async move {
-                                        let _ = key_event_handler::handle_input(writer_clone).await;
+                                        let _ = key_event_handler::handle_input(state_clone, writer_clone).await;
                                     }));
                                 }
                             },
-                            ServerMessage::GameState(game_state) => state.set_game_state(game_state),
+                            ServerMessage::GameState(game_state) => state_guard.set_game_state(game_state),
                         }
-                        let _ = ui::render(state);
+                        let _ = ui::render(&*state_guard);
                     },
                     Err(e) => {
                         if let Some(io_err) = e.downcast_ref::<std::io::Error>() {
                             if io_err.kind() == std::io::ErrorKind::UnexpectedEof {
-                                println!("Сервер закрыл соединение");
-                                state.running = false;
+                                state.lock().await.running = false;
                                 break;
                             }
                         }
@@ -162,11 +170,21 @@ pub async fn run_game_loop(state: &mut ClientState, stream: TcpStream) {
                     }
                 }
             },
+
             _ = signal::ctrl_c() => {
-                state.running = false;
+                state.lock().await.running = false;
+            },
+
+            Some(_) = async {
+                if let Some(handle) = &mut input_task {
+                    Some(handle.await.ok())
+                } else { None }
+            } => {
+                state.lock().await.running = false;
             }
         }
     }
+
     if let Some(handle) = input_task.take() {
         handle.abort();
     }

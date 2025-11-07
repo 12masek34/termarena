@@ -80,7 +80,10 @@ async fn handle_client(
                 let mut state_guard = game_state.lock().await;
                 state_guard.move_player(player_id, direction, &map);
             }
-            ClientMessage::Quit => break,
+            ClientMessage::Quit => {
+                println!("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!111");
+                break;
+            }
         }
         let state_guard = game_state.lock().await;
         tx.send(ServerMessage::GameState(state_guard.clone()))?;
