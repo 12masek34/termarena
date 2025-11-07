@@ -121,6 +121,11 @@ pub async fn run_client(addr: &str) -> Result<(), Box<dyn std::error::Error>> {
 }
 
 pub async fn run_game_loop(state: ClientState, stream: TcpStream) {
+    let _raw_mode_guard = scopeguard::guard((), |_| {
+        let _ = crossterm::terminal::disable_raw_mode();
+        println!("Сервер разорвал соединение");
+    });
+
     ui::start_game_screen();
     let state = Arc::new(Mutex::new(state));
     let (reader, writer) = tokio::io::split(stream);
