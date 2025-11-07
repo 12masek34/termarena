@@ -44,6 +44,47 @@ impl ClientState {
     pub fn set_game_state(&mut self, game_state: GameState) {
         self.players = game_state.players;
     }
+
+    pub fn current_player(&self) -> Option<&Player> {
+        self.id.and_then(|id| self.players.get(&id))
+    }
+
+    pub fn build_frame(&self) -> String {
+        let map = match &self.map {
+            Some(m) => m,
+            None => return String::new(),
+        };
+
+        let mut frame_rows: Vec<String> = vec![];
+
+        for (y, row) in map.tiles.iter().enumerate() {
+            let mut row_str = row.iter().collect::<String>();
+
+            for (_id, player) in self.players.iter() {
+                if player.y == y && player.x < row_str.len() {
+                    row_str.replace_range(player.x..player.x + 1, "@");
+                }
+            }
+
+            frame_rows.push(row_str);
+        }
+
+        let mut frame = frame_rows.join("\n");
+
+        if let Some(player) = self.current_player() {
+            frame.push_str(&format!(
+                "\nYou: {}\nPosition: ({},{})\nPlayers nearby: {}\nMap size: {}x{}\n",
+                self.id.unwrap_or(0),
+                player.x,
+                player.y,
+                self.players.len(),
+                map.width,
+                map.height,
+            ));
+        }
+
+        frame
+    }
 }
 
 pub async fn run_client(addr: &str) -> Result<(), Box<dyn std::error::Error>> {

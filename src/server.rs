@@ -78,7 +78,7 @@ async fn handle_client(
         match client_message {
             ClientMessage::Move(direction) => {
                 let mut state_guard = game_state.lock().await;
-                state_guard.move_player(player_id, direction);
+                state_guard.move_player(player_id, direction, &map);
             }
             ClientMessage::Quit => break,
         }
