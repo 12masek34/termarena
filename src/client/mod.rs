@@ -49,39 +49,57 @@ impl ClientState {
         self.id.and_then(|id| self.players.get(&id))
     }
 
-    pub fn build_frame(&self) -> String {
+    pub fn build_frame(&self, viewport_width: usize, viewport_height: usize) -> String {
         let map = match &self.map {
             Some(m) => m,
             None => return String::new(),
         };
 
-        let mut frame_rows: Vec<String> = vec![];
+        let player = match self.current_player() {
+            Some(p) => p,
+            None => return String::new(),
+        };
 
-        for (y, row) in map.tiles.iter().enumerate() {
-            let mut row_str = row.iter().collect::<String>();
+        let half_w = viewport_width / 2;
+        let half_h = viewport_height / 2;
 
-            for (_id, player) in self.players.iter() {
-                if player.y == y && player.x < row_str.len() {
-                    row_str.replace_range(player.x..player.x + 1, "@");
+        let min_x = player.x.saturating_sub(half_w);
+        let min_y = player.y.saturating_sub(half_h);
+
+        let max_x = (min_x + viewport_width).min(map.width);
+        let max_y = (min_y + viewport_height).min(map.height);
+
+        let mut frame_rows: Vec<String> = Vec::with_capacity(viewport_height);
+
+        for y in min_y..max_y {
+            let mut row_str = String::new();
+            for x in min_x..max_x {
+                let mut ch = map.tiles[y][x];
+
+                for (_id, other) in self.players.iter() {
+                    if other.x == x && other.y == y {
+                        ch = '@';
+                        break;
+                    }
                 }
-            }
 
+                row_str.push(ch);
+            }
             frame_rows.push(row_str);
         }
 
         let mut frame = frame_rows.join("\n");
 
-        if let Some(player) = self.current_player() {
-            frame.push_str(&format!(
-                "\nYou: {}\nPosition: ({},{})\nPlayers nearby: {}\nMap size: {}x{}\n",
-                self.id.unwrap_or(0),
-                player.x,
-                player.y,
-                self.players.len(),
-                map.width,
-                map.height,
-            ));
-        }
+        // Статус игрока
+        frame.push_str(&format!(
+            "\nYou: {}\nPosition: ({},{})\nPlayers nearby: {}\nMap size: {}x{}\n",
+            self.id.unwrap_or(0),
+            player.x,
+            player.y,
+            self.players.len(),
+            map.width,
+            map.height,
+        ));
 
         frame
     }

@@ -19,7 +19,7 @@ pub fn end_game_screen() {
 }
 
 pub fn render(state: &ClientState) -> Result<(), Box<dyn std::error::Error>> {
-    let frame = state.build_frame();
+    let frame = state.build_frame(40, 40);
     disable_raw_mode()?;
     print!("\x1B[2J\x1B[H{}", frame);
     enable_raw_mode()?;

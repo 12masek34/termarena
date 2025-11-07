@@ -17,7 +17,7 @@ pub async fn run_server(port: &str) -> Result<String, Box<dyn std::error::Error>
         extermal_id, port, internal_id, port
     );
 
-    let map = Arc::new(Map::new(40, 40));
+    let map = Arc::new(Map::new(100, 100));
     let game_state = Arc::new(Mutex::new(GameState::new()));
     println!("Карта создана");
 
