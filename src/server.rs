@@ -24,13 +24,13 @@ pub async fn run_server(port: &str) -> Result<String, Box<dyn std::error::Error>
     let (tx, _rx) = broadcast::channel::<ServerMessage>(100);
 
     loop {
-        let (mut socket, addr) = listener.accept().await?;
+        let (socket, addr) = listener.accept().await?;
         println!("Новый игрок подключился: {}", addr);
 
         let map_clone = Arc::clone(&map);
         let game_state_clone = Arc::clone(&game_state);
         let tx = tx.clone();
-        let mut rx = tx.subscribe();
+        let rx = tx.subscribe();
 
         tokio::spawn(async move {
             if let Err(e) = handle_client(socket, map_clone, game_state_clone, tx, rx).await {
@@ -50,7 +50,6 @@ async fn handle_client(
     let (reader, writer) = tokio::io::split(socket);
     let reader = Arc::new(Mutex::new(reader));
     let writer = Arc::new(Mutex::new(writer));
-    let writer_clone = Arc::clone(&writer);
 
     let player_id = network::send_init_state(&writer, &*map, &*game_state, &tx).await?;
     tokio::spawn(async move {
@@ -84,12 +83,7 @@ async fn handle_client(
             ClientMessage::Quit => break,
         }
         let state_guard = game_state.lock().await;
-        let server_message = ServerMessage::GameState(state_guard.clone());
-        let mut write_guard = writer_clone.lock().await;
-        if let Err(e) = send_message(&mut *write_guard, &server_message).await {
-            eprintln!("Ошибка при отправке сообщения клиенту: {:?}", e);
-            break;
-        }
+        tx.send(ServerMessage::GameState(state_guard.clone()))?;
     }
 
     Ok(())
