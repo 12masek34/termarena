@@ -77,13 +77,11 @@ pub async fn run_game_loop(state: &mut ClientState, stream: TcpStream) {
                         match message {
                             ServerMessage::Map(map) => state.set_map(map),
                             ServerMessage::InitPlayer(player) => {
-                                let player_id: u32 = player.id;
                                 state.set_player(player);
-
                                 if input_task.is_none() {
                                     let writer_clone = Arc::clone(&writer);
                                     input_task = Some(tokio::spawn(async move {
-                                        let _ = key_event_handler::handle_input(writer_clone, player_id).await;
+                                        let _ = key_event_handler::handle_input(writer_clone).await;
                                     }));
                                 }
                             },

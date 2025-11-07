@@ -78,7 +78,7 @@ async fn handle_client(
         println!("{:?}", client_message);
         match client_message {
             ClientMessage::Move(direction) => {
-                println!("Direction {:?}", direction);
+                println!("{player_id} {:?}", direction);
             }
             ClientMessage::Quit => break,
         }

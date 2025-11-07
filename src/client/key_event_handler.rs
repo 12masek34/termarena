@@ -11,7 +11,6 @@ use crate::network::{ClientMessage, send_message};
 
 pub async fn handle_input(
     stream: Arc<Mutex<WriteHalf<TcpStream>>>,
-    player_id: u32,
 ) -> Result<(), Box<dyn std::error::Error>> {
     enable_raw_mode()?;
     loop {
@@ -30,19 +29,15 @@ pub async fn handle_input(
 
             let direction = match code {
                 KeyCode::Up | KeyCode::Char('w') | KeyCode::Char('W') => {
-                    println!("⬆️ Вверх");
                     Some(state::Direction::Up)
                 }
                 KeyCode::Down | KeyCode::Char('s') | KeyCode::Char('S') => {
-                    println!("⬇️ Вниз");
                     Some(state::Direction::Down)
                 }
                 KeyCode::Left | KeyCode::Char('a') | KeyCode::Char('A') => {
-                    println!("⬅️ Влево");
                     Some(state::Direction::Left)
                 }
                 KeyCode::Right | KeyCode::Char('d') | KeyCode::Char('D') => {
-                    println!("➡️ Вправо");
                     Some(state::Direction::Right)
                 }
                 _ => None,
