@@ -57,7 +57,13 @@ async fn handle_client(
             if let Ok(server_message) = rx.recv().await {
                 let mut write_guard = writer.lock().await;
                 if let Err(e) = send_message(&mut *write_guard, &server_message).await {
-                    eprintln!("Ошибка при отправке сообщения клиенту: {:?}", e);
+                    if let Some(io_err) = e.downcast_ref::<std::io::Error>() {
+                        if io_err.kind() != std::io::ErrorKind::BrokenPipe {
+                            eprintln!("Ошибка при отправке сообщения клиенту: {:?}", io_err);
+                        }
+                    } else {
+                        eprintln!("Ошибка при отправке сообщения клиенту: {:?}", e);
+                    }
                     break;
                 }
             }
@@ -81,7 +87,9 @@ async fn handle_client(
                 state_guard.move_player(player_id, direction, &map);
             }
             ClientMessage::Quit => {
-                println!("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!111");
+                let mut state_guard = game_state.lock().await;
+                state_guard.remove(player_id);
+                tx.send(ServerMessage::GameState(state_guard.clone()))?;
                 break;
             }
         }
