@@ -38,10 +38,10 @@ impl Map {
         }
     }
 
-    pub fn is_walkable(&self, x: usize, y: usize) -> bool {
-        if x >= self.width || y >= self.height {
-            return false;
-        }
-        self.tiles[y][x] == EMPTY
-    }
+    // pub fn is_walkable(&self, x: usize, y: usize) -> bool {
+    //     if x >= self.width || y >= self.height {
+    //         return false;
+    //     }
+    //     self.tiles[y][x] == EMPTY
+    // }
 }

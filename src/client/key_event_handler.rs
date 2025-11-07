@@ -23,7 +23,6 @@ pub async fn handle_input(
             if (code == KeyCode::Char('q') && modifiers.is_empty())
                 || (code == KeyCode::Char('c') && modifiers.contains(KeyModifiers::CONTROL))
             {
-                println!("🚪 Выход");
                 break;
             }
 

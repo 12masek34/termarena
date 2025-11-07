@@ -32,7 +32,9 @@ impl ClientState {
     }
 
     pub fn set_map(&mut self, map: Map) {
-        self.map = Some(map);
+        if self.map.is_none() {
+            self.map = Some(map);
+        }
     }
 
     pub fn set_player(&mut self, player: Player) {
@@ -60,7 +62,7 @@ pub async fn run_client(addr: &str) -> Result<(), Box<dyn std::error::Error>> {
 }
 
 pub async fn run_game_loop(state: &mut ClientState, stream: TcpStream) {
-    // ui::start_game_screen();
+    ui::start_game_screen();
     let (reader, writer) = tokio::io::split(stream);
     let reader = Arc::new(Mutex::new(reader));
     let writer = Arc::new(Mutex::new(writer));
@@ -87,7 +89,7 @@ pub async fn run_game_loop(state: &mut ClientState, stream: TcpStream) {
                             },
                             ServerMessage::GameState(game_state) => state.set_game_state(game_state),
                         }
-                        ui::render(state);
+                        let _ = ui::render(state);
                     },
                     Err(e) => {
                         if let Some(io_err) = e.downcast_ref::<std::io::Error>() {
@@ -109,5 +111,5 @@ pub async fn run_game_loop(state: &mut ClientState, stream: TcpStream) {
     if let Some(handle) = input_task.take() {
         handle.abort();
     }
-    // ui::end_game_screen();
+    ui::end_game_screen();
 }

@@ -2,7 +2,7 @@ use super::ClientState;
 use crossterm::{
     ExecutableCommand,
     cursor::{Hide, Show},
-    terminal::{EnterAlternateScreen, LeaveAlternateScreen},
+    terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
 use std::io::{Write, stdout};
 
@@ -18,35 +18,22 @@ pub fn end_game_screen() {
     stdout.execute(LeaveAlternateScreen).unwrap();
 }
 
-pub fn render(state: &ClientState) {
-    println!("{:?}", state.players);
-    // let map = match &state.map {
-    //     Some(m) => m,
-    //     None => return,
-    // };
+pub fn render(state: &ClientState) -> Result<(), Box<dyn std::error::Error>> {
+    let map = match &state.map {
+        Some(m) => m,
+        None => return Ok(()),
+    };
 
-    // let mut frame = String::new();
+    let mut frame = String::new();
+    for row in &map.tiles {
+        frame.push_str(&row.iter().collect::<String>());
+        frame.push('\n');
+    }
 
-    // for (y, row) in map.tiles.iter().enumerate() {
-    //     for (x, ch) in row.iter().enumerate() {
-    //         let mut ch_to_draw = *ch;
-    //         for (_, player) in state.players.iter() {
-    //             if player.x == x && player.y == y {
-    //                 ch_to_draw = '@';
-    //                 break;
-    //             }
-    //         }
-    //         frame.push(ch_to_draw);
-    //     }
-    //     frame.push('\n');
-    // }
+    disable_raw_mode()?;
+    print!("\x1B[2J\x1B[H{}", frame);
+    enable_raw_mode()?;
+    std::io::stdout().flush().unwrap();
 
-    // frame.push_str(&format!(
-    //     "\nID: {}\n",
-    //     state.id.map_or("unknown".to_string(), |id| id.to_string())
-    // ));
-
-    // print!("\x1B[H");
-    // print!("{}", frame);
-    // std::io::stdout().flush().unwrap();
+    Ok(())
 }
