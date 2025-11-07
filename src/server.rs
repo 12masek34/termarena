@@ -50,6 +50,7 @@ async fn handle_client(
     let (reader, writer) = tokio::io::split(socket);
     let reader = Arc::new(Mutex::new(reader));
     let writer = Arc::new(Mutex::new(writer));
+    let writer_clone = Arc::clone(&writer);
 
     let player_id = network::send_init_state(&writer, &*map, &*game_state, &tx).await?;
     tokio::spawn(async move {
@@ -75,12 +76,19 @@ async fn handle_client(
                 }
             }
         };
-        println!("{:?}", client_message);
         match client_message {
             ClientMessage::Move(direction) => {
-                println!("{player_id} {:?}", direction);
+                let mut state_guard = game_state.lock().await;
+                state_guard.move_player(player_id, direction);
             }
             ClientMessage::Quit => break,
+        }
+        let state_guard = game_state.lock().await;
+        let server_message = ServerMessage::GameState(state_guard.clone());
+        let mut write_guard = writer_clone.lock().await;
+        if let Err(e) = send_message(&mut *write_guard, &server_message).await {
+            eprintln!("Ошибка при отправке сообщения клиенту: {:?}", e);
+            break;
         }
     }
 

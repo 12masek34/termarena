@@ -45,4 +45,23 @@ impl GameState {
 
         player
     }
+
+    pub fn move_player(&mut self, player_id: u32, direction: Direction) {
+        if let Some(player) = self.players.get_mut(&player_id) {
+            match direction {
+                Direction::Up => {
+                    player.y -= 1;
+                }
+                Direction::Down => {
+                    player.y += 1;
+                }
+                Direction::Left => {
+                    player.x -= 1;
+                }
+                Direction::Right => {
+                    player.x += 1;
+                }
+            }
+        }
+    }
 }

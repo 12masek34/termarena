@@ -19,33 +19,34 @@ pub fn end_game_screen() {
 }
 
 pub fn render(state: &ClientState) {
-    let map = match &state.map {
-        Some(m) => m,
-        None => return,
-    };
+    println!("{:?}", state.players);
+    // let map = match &state.map {
+    //     Some(m) => m,
+    //     None => return,
+    // };
 
-    let mut frame = String::new();
+    // let mut frame = String::new();
 
-    for (y, row) in map.tiles.iter().enumerate() {
-        for (x, ch) in row.iter().enumerate() {
-            let mut ch_to_draw = *ch;
-            for (_, player) in state.players.iter() {
-                if player.x == x && player.y == y {
-                    ch_to_draw = '@';
-                    break;
-                }
-            }
-            frame.push(ch_to_draw);
-        }
-        frame.push('\n');
-    }
+    // for (y, row) in map.tiles.iter().enumerate() {
+    //     for (x, ch) in row.iter().enumerate() {
+    //         let mut ch_to_draw = *ch;
+    //         for (_, player) in state.players.iter() {
+    //             if player.x == x && player.y == y {
+    //                 ch_to_draw = '@';
+    //                 break;
+    //             }
+    //         }
+    //         frame.push(ch_to_draw);
+    //     }
+    //     frame.push('\n');
+    // }
 
-    frame.push_str(&format!(
-        "\nID: {}\n",
-        state.id.map_or("unknown".to_string(), |id| id.to_string())
-    ));
+    // frame.push_str(&format!(
+    //     "\nID: {}\n",
+    //     state.id.map_or("unknown".to_string(), |id| id.to_string())
+    // ));
 
-    print!("\x1B[H");
-    print!("{}", frame);
-    std::io::stdout().flush().unwrap();
+    // print!("\x1B[H");
+    // print!("{}", frame);
+    // std::io::stdout().flush().unwrap();
 }

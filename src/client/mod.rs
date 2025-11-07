@@ -87,6 +87,7 @@ pub async fn run_game_loop(state: &mut ClientState, stream: TcpStream) {
                             },
                             ServerMessage::GameState(game_state) => state.set_game_state(game_state),
                         }
+                        ui::render(state);
                     },
                     Err(e) => {
                         if let Some(io_err) = e.downcast_ref::<std::io::Error>() {
