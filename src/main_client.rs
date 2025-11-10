@@ -1,1 +1,64 @@
-fn main() {}
+use macroquad::prelude::*;
+use std::env;
+use std::{
+    net::{SocketAddr, UdpSocket},
+    sync::mpsc::{self, Receiver, Sender},
+    thread,
+};
+use termarena::network::{send_message, state::ClientMessage};
+
+#[macroquad::main("Client")]
+async fn main() {
+    let args: Vec<String> = env::args().collect();
+    let server_addr_str = args
+        .get(1)
+        .cloned()
+        .unwrap_or_else(|| String::from("127.0.0.1:8888"));
+    let server_addr: SocketAddr = server_addr_str.parse().unwrap();
+    let (tx, rx): (Sender<ClientMessage>, Receiver<ClientMessage>) = mpsc::channel();
+    let socket = UdpSocket::bind("0.0.0.0:0").expect("Failed to bind client socket");
+    socket
+        .set_nonblocking(true)
+        .expect("Failed to set nonblocking");
+    send_message(&socket, &ClientMessage::Init, server_addr);
+    let socket_clone = socket.try_clone().unwrap();
+
+    thread::spawn(move || {
+        while let Ok(msg) = rx.recv() {
+            let _ = send_message(&socket_clone, &msg, server_addr);
+        }
+    });
+
+    let mut player_pos = (100.0f32, 100.0f32);
+    loop {
+        clear_background(BLACK);
+        let mut moved = false;
+        let mut dx = 0;
+        let mut dy = 0;
+
+        if is_key_down(KeyCode::W) {
+            dy -= 1;
+            moved = true;
+        }
+        if is_key_down(KeyCode::S) {
+            dy += 1;
+            moved = true;
+        }
+        if is_key_down(KeyCode::A) {
+            dx -= 1;
+            moved = true;
+        }
+        if is_key_down(KeyCode::D) {
+            dx += 1;
+            moved = true;
+        }
+
+        if moved {
+            player_pos.0 += dx as f32 * 5.0;
+            player_pos.1 += dy as f32 * 5.0;
+            let _ = tx.send(ClientMessage::Move(dx, dy));
+        }
+        draw_circle(player_pos.0, player_pos.1, 20.0, BLUE);
+        next_frame().await;
+    }
+}

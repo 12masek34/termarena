@@ -1,21 +1,28 @@
 use std::{
-    net::{UdpSocket, SocketAddr},
-    sync::{Arc, Mutex, mpsc::{self}},
+    net::{SocketAddr, UdpSocket},
+    sync::{
+        Arc, Mutex,
+        mpsc::{self},
+    },
     thread,
 };
 
 use crate::{
     game::state::GameState,
-    network::{recv_message, send_message, state::{ClientMessage, ServerMessage}},
+    network::{
+        recv_message, send_message,
+        state::{ClientMessage, ServerMessage},
+    },
 };
 
 type SharedGameState = Arc<Mutex<GameState>>;
 type SharedClients = Arc<Mutex<Vec<SocketAddr>>>;
 
 pub fn run_server(port: String) {
-    let socket = UdpSocket::bind(format!("0.0.0.0:{}", port))
-        .expect("Could not bind UDP socket");
-    socket.set_nonblocking(false).expect("Failed to set blocking mode");
+    let socket = UdpSocket::bind(format!("0.0.0.0:{}", port)).expect("Could not bind UDP socket");
+    socket
+        .set_nonblocking(false)
+        .expect("Failed to set blocking mode");
 
     let game_state: SharedGameState = Arc::new(Mutex::new(GameState::new()));
     let clients: SharedClients = Arc::new(Mutex::new(Vec::new()));
@@ -33,11 +40,8 @@ pub fn run_server(port: String) {
                 let gs = gs_clone.lock().unwrap();
                 let clients_guard = clients_clone.lock().unwrap();
                 for &client in clients_guard.iter() {
-                    let _ = send_message(
-                        &socket_clone,
-                        &ServerMessage::GameState(gs.clone()),
-                        client,
-                    );
+                    let _ =
+                        send_message(&socket_clone, &ServerMessage::GameState(gs.clone()), client);
                 }
             }
         });
@@ -58,8 +62,8 @@ pub fn run_server(port: String) {
                 }
                 ClientMessage::Quit => {
                     println!("Player disconnected");
-                },
-                ClientMessage::Move => {
+                }
+                ClientMessage::Move(x, y) => {
                     println!("Move");
                 }
             }

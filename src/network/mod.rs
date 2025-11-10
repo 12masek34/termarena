@@ -2,6 +2,7 @@ pub mod state;
 use std::net::SocketAddr;
 use std::net::UdpSocket;
 
+use serde::Serialize;
 use state::{ClientMessage, ServerMessage};
 
 pub fn recv_message(socket: &UdpSocket) -> Option<(ClientMessage, SocketAddr)> {
@@ -18,17 +19,17 @@ pub fn recv_message(socket: &UdpSocket) -> Option<(ClientMessage, SocketAddr)> {
     }
 }
 
-pub fn send_message(socket: &UdpSocket, msg: &ServerMessage, target: SocketAddr) -> bool {
+pub fn send_message<T: Serialize>(socket: &UdpSocket, msg: &T, target: SocketAddr) -> bool {
     match bincode::serialize(msg) {
         Ok(data) => match socket.send_to(&data, target) {
             Ok(_) => true,
             Err(e) => {
-                eprintln!("Failed to send ServerMessage: {:?}", e);
+                eprintln!("Failed to send message: {:?}", e);
                 false
             }
         },
         Err(e) => {
-            eprintln!("Failed to serialize ServerMessage: {:?}", e);
+            eprintln!("Failed to serialize message: {:?}", e);
             false
         }
     }
