@@ -71,7 +71,7 @@ pub async fn handle_input(
             }
         }
     }
-
     disable_raw_mode()?;
+
     Ok(())
 }
