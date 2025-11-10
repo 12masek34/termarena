@@ -1,25 +1,14 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use crate::map::Map;
-use rand::Rng;
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct Player {
     pub id: u32,
     pub x: usize,
     pub y: usize,
 }
 
-#[derive(Clone, Serialize, Deserialize, Debug)]
-pub enum Direction {
-    Up,
-    Down,
-    Left,
-    Right,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct GameState {
     pub players: HashMap<u32, Player>,
 }
@@ -37,32 +26,5 @@ impl GameState {
 
     pub fn remove(&mut self, id: u32) {
         self.players.remove(&id);
-    }
-
-    pub fn create_player(&mut self, map: &Map) -> Player {
-        let mut rng = rand::thread_rng();
-        let id = self.next_id();
-        let x = rng.gen_range(0..map.width);
-        let y = rng.gen_range(0..map.height);
-        let player = Player { id, x, y };
-        self.players.insert(id, player.clone());
-
-        player
-    }
-
-    pub fn move_player(&mut self, player_id: u32, direction: Direction, map: &Map) {
-        if let Some(player) = self.players.get_mut(&player_id) {
-            let (new_x, new_y) = match direction {
-                Direction::Up => (player.x, player.y.saturating_sub(1)),
-                Direction::Down => (player.x, (player.y + 1).min(map.height - 1)),
-                Direction::Left => (player.x.saturating_sub(1), player.y),
-                Direction::Right => ((player.x + 1).min(map.width - 1), player.y),
-            };
-
-            if map.is_walkable(new_x, new_y) {
-                player.x = new_x;
-                player.y = new_y;
-            }
-        }
     }
 }
