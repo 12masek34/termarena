@@ -1,14 +1,16 @@
+use crate::game::state::Player;
+
 #[derive(Debug)]
 pub struct ClientState {
-    pub id: Option<u32>,
-    pub players: HashMap<u32, Player>,
+    pub player: Option<Player>,
 }
 
 impl ClientState {
     pub fn new() -> Self {
-        Self {
-            id: None,
-            players: HashMap::new(),
-        }
+        Self { player: None }
+    }
+
+    pub fn init_player(&mut self, player: Player) {
+        self.player = Some(player);
     }
 }

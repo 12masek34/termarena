@@ -27,4 +27,11 @@ impl GameState {
     pub fn remove(&mut self, id: u32) {
         self.players.remove(&id);
     }
+
+    pub fn create_player(&self) -> Player {
+        let id = self.next_id();
+        let x = 1;
+        let y = 1;
+        Player { id, x, y }
+    }
 }

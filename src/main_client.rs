@@ -3,8 +3,10 @@ use std::env;
 use std::{
     net::{SocketAddr, UdpSocket},
     sync::mpsc::{self, Receiver, Sender},
+    sync::{Arc, Mutex},
     thread,
 };
+use termarena::client::state::ClientState;
 use termarena::network::recv_message;
 use termarena::network::state::ServerMessage;
 use termarena::network::{send_message, state::ClientMessage};
@@ -19,6 +21,7 @@ async fn main() {
     let server_addr: SocketAddr = server_addr_str.parse().unwrap();
     let (tx, rx): (Sender<ClientMessage>, Receiver<ClientMessage>) = mpsc::channel();
     let socket = UdpSocket::bind("0.0.0.0:0").expect("Failed to bind client socket");
+    let client_state = Arc::new(Mutex::new(ClientState::new()));
 
     socket
         .set_nonblocking(true)
@@ -32,7 +35,14 @@ async fn main() {
     thread::spawn(move || {
         loop {
             if let Some((msg, addr)) = recv_message::<ServerMessage>(&socket_clone_recv) {
-                println!("Received from {}: {:?}", addr, msg);
+                match msg {
+                    ServerMessage::InitPlayer(player) => {
+                        client_state.lock().unwrap().init_player(player);
+                    }
+                    ServerMessage::GameState(state) => {
+                        println!("{:?}", client_state)
+                    }
+                }
             }
         }
     });
