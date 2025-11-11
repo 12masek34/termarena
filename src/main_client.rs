@@ -105,8 +105,6 @@ async fn main() {
         }
 
         if moved {
-            player_pos.0 += dx * 5.0;
-            player_pos.1 += dy * 5.0;
             let _ = tx.send(ClientMessage::Move(dx, dy));
         }
 
@@ -123,7 +121,7 @@ async fn main() {
             } else {
                 RED
             };
-            draw_circle(draw_x, draw_y, 20.0, color);
+            draw_circle(draw_x, draw_y, 10.0, color);
         }
 
         next_frame().await;
