@@ -40,10 +40,10 @@ async fn main() {
                     }
                     ServerMessage::InitPlayer(player) => {
                         client_state.lock().unwrap().init_player(player);
-                        println!("{:?}", client_state)
                     }
                     ServerMessage::GameState(state) => {
-                        println!("{:?}", client_state)
+                        client_state.lock().unwrap().update_state(state);
+                        println!("{:?}", client_state);
                     }
                 }
             }
@@ -62,23 +62,23 @@ async fn main() {
     loop {
         clear_background(BLACK);
         let mut moved = false;
-        let mut dx = 0;
-        let mut dy = 0;
+        let mut dx: f32 = 0.0;
+        let mut dy: f32 = 0.0;
 
         if is_key_down(KeyCode::W) {
-            dy -= 1;
+            dy -= 1.0;
             moved = true;
         }
         if is_key_down(KeyCode::S) {
-            dy += 1;
+            dy += 1.0;
             moved = true;
         }
         if is_key_down(KeyCode::A) {
-            dx -= 1;
+            dx -= 1.0;
             moved = true;
         }
         if is_key_down(KeyCode::D) {
-            dx += 1;
+            dx += 1.0;
             moved = true;
         }
 

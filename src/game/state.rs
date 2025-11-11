@@ -39,4 +39,13 @@ impl GameState {
 
         player
     }
+
+    pub fn move_player(&mut self, player_id: Option<u32>, x: f32, y: f32) {
+        if let Some(id) = player_id {
+            if let Some(player) = self.players.get_mut(&id) {
+                player.x += x;
+                player.y += y;
+            }
+        }
+    }
 }

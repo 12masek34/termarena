@@ -26,6 +26,7 @@ pub fn run_server(port: String) {
 
     let game_state: SharedGameState = Arc::new(Mutex::new(GameState::new()));
     let clients: SharedClients = Arc::new(Mutex::new(Vec::new()));
+    let mut player_id: Option<u32> = None;
 
     println!("Server running on port {}", port);
 
@@ -53,6 +54,7 @@ pub fn run_server(port: String) {
                 ClientMessage::Init => {
                     println!("Player init");
                     let player = game_state.lock().unwrap().create_player();
+                    player_id = Some(player.id);
                     tx.send((ServerMessage::Map, src))
                         .expect("failed to send to net thread");
                     tx.send((ServerMessage::InitPlayer(player), src))
@@ -63,6 +65,7 @@ pub fn run_server(port: String) {
                 }
                 ClientMessage::Move(x, y) => {
                     println!("Move");
+                    game_state.lock().unwrap().move_player(player_id, x, y);
                     tx.send((
                         ServerMessage::GameState(game_state.lock().unwrap().clone()),
                         src,

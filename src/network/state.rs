@@ -13,5 +13,5 @@ pub enum ServerMessage {
 pub enum ClientMessage {
     Init,
     Quit,
-    Move(i32, i32),
+    Move(f32, f32),
 }
