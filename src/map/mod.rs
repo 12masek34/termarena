@@ -58,10 +58,11 @@ impl Map {
             for x in start_x..end_x {
                 let draw_x = x as f32 * tile_size + offset_x;
                 let draw_y = y as f32 * tile_size + offset_y;
-                match self.tiles[y][x] {
-                    Tile::Empty => draw_rectangle(draw_x, draw_y, tile_size, tile_size, BLACK),
-                    Tile::Wall => draw_rectangle(draw_x, draw_y, tile_size, tile_size, WHITE),
-                }
+                let color = match self.tiles[y][x] {
+                    Tile::Empty => BLACK,
+                    Tile::Wall => WHITE,
+                };
+                draw_rectangle(draw_x, draw_y, tile_size, tile_size, color);
             }
         }
     }
