@@ -1,5 +1,4 @@
 use macroquad::prelude::*;
-use termarena::client::key_event_handler::listem_move;
 use std::env;
 use std::{
     net::{SocketAddr, UdpSocket},
@@ -7,6 +6,7 @@ use std::{
     sync::{Arc, Mutex},
     thread,
 };
+use termarena::client::key_event_handler::listem_move;
 use termarena::client::state::ClientState;
 use termarena::network::recv_message;
 use termarena::network::state::ServerMessage;
@@ -86,7 +86,7 @@ async fn main() {
 
         let (dx, dy) = listem_move();
 
-        if let (Some(dx),Some(dy)) = (dx, dy) {
+        if let (Some(dx), Some(dy)) = (dx, dy) {
             let _ = tx.send(ClientMessage::Move(dx, dy));
         }
 
