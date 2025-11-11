@@ -8,6 +8,7 @@ use std::{
 };
 use termarena::client::key_event_handler::listem_move;
 use termarena::client::state::ClientState;
+use termarena::map::Tile;
 use termarena::network::recv_message;
 use termarena::network::state::ServerMessage;
 use termarena::network::{send_message, state::ClientMessage};
@@ -37,8 +38,9 @@ async fn main() {
         loop {
             if let Some((msg, addr)) = recv_message::<ServerMessage>(&socket_clone_recv) {
                 match msg {
-                    ServerMessage::Map => {
-                        println!("MAP");
+                    ServerMessage::Map(map) => {
+                        client_state_clone.lock().unwrap().set_map(map);
+                        println!("Init Map");
                     }
                     ServerMessage::InitPlayer(player) => {
                         client_state_clone.lock().unwrap().init_player(player);
@@ -46,7 +48,7 @@ async fn main() {
                     }
                     ServerMessage::GameState(state) => {
                         client_state_clone.lock().unwrap().update_state(state);
-                        println!("{:?}", client_state_clone);
+                        // println!("{:?}", client_state_clone);
                     }
                 }
             }
@@ -90,20 +92,37 @@ async fn main() {
             let _ = tx.send(ClientMessage::Move(dx, dy));
         }
 
+        let tile_size = 10.0;
         let screen_center_x = screen_width() / 2.0;
         let screen_center_y = screen_height() / 2.0;
-        let offset_x = screen_center_x - player_pos.0;
-        let offset_y = screen_center_y - player_pos.1;
+        let offset_x = screen_center_x - player_pos.0 * tile_size;
+        let offset_y = screen_center_y - player_pos.1 * tile_size;
+        let locked_client = client_state.lock().unwrap();
+        let map = match &locked_client.map {
+            Some(map) => map,
+            None => continue,
+        };
+
+        for (y, row) in map.tiles.iter().enumerate() {
+            for (x, tile) in row.iter().enumerate() {
+                let draw_x = x as f32 * tile_size + offset_x;
+                let draw_y = y as f32 * tile_size + offset_y;
+                match tile {
+                    Tile::Empty => draw_rectangle(draw_x, draw_y, tile_size, tile_size, BLACK),
+                    Tile::Wall => draw_rectangle(draw_x, draw_y, tile_size, tile_size, WHITE),
+                }
+            }
+        }
 
         for player in gs.players.values() {
-            let draw_x = player.x + offset_x;
-            let draw_y = player.y + offset_y;
+            let draw_x = player.x * tile_size + offset_x;
+            let draw_y = player.y * tile_size + offset_y;
             let color = if Some(player.id) == current_id {
                 BLUE
             } else {
                 RED
             };
-            draw_circle(draw_x, draw_y, 10.0, color);
+            draw_circle(draw_x, draw_y, tile_size, color);
         }
 
         next_frame().await;

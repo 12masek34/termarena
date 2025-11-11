@@ -7,7 +7,7 @@ use serde::de::DeserializeOwned;
 use state::{ClientMessage, ServerMessage};
 
 pub fn recv_message<T: DeserializeOwned>(socket: &UdpSocket) -> Option<(T, SocketAddr)> {
-    let mut buf = [0u8; 1024];
+    let mut buf = [0u8; 65536];
     match socket.recv_from(&mut buf) {
         Ok((amt, src)) => match bincode::deserialize::<T>(&buf[..amt]) {
             Ok(msg) => Some((msg, src)),

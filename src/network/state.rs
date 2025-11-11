@@ -1,10 +1,13 @@
 use serde::{Deserialize, Serialize};
 
-use crate::game::state::{GameState, Player};
+use crate::{
+    game::state::{GameState, Player},
+    map::Map,
+};
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub enum ServerMessage {
-    Map,
+    Map(Map),
     InitPlayer(Player),
     GameState(GameState),
 }

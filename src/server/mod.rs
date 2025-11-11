@@ -9,6 +9,7 @@ use std::{
 
 use crate::{
     game::state::GameState,
+    map::Map,
     network::{
         recv_message, send_message,
         state::{ClientMessage, ServerMessage},
@@ -24,6 +25,7 @@ pub fn run_server(port: String) {
         .set_nonblocking(false)
         .expect("Failed to set blocking mode");
 
+    let map = Map::new(100, 100);
     let game_state: SharedGameState = Arc::new(Mutex::new(GameState::new()));
     let clients: SharedClients = Arc::new(Mutex::new(Vec::new()));
     let mut player_id: Option<u32> = None;
@@ -59,7 +61,7 @@ pub fn run_server(port: String) {
                     let player = game_state.lock().unwrap().create_player();
                     player_id = Some(player.id);
                     let _ = tx
-                        .send(ServerMessage::Map)
+                        .send(ServerMessage::Map(map.clone()))
                         .expect("failed to send to net thread");
                     let _ = tx
                         .send(ServerMessage::InitPlayer(player))

@@ -1,8 +1,12 @@
-use crate::game::state::{GameState, Player};
+use crate::{
+    game::state::{GameState, Player},
+    map::Map,
+};
 
 #[derive(Debug)]
 pub struct ClientState {
     pub id: Option<u32>,
+    pub map: Option<Map>,
     pub game_state: Option<GameState>,
 }
 
@@ -10,6 +14,7 @@ impl ClientState {
     pub fn new() -> Self {
         Self {
             id: None,
+            map: None,
             game_state: None,
         }
     }
@@ -28,5 +33,9 @@ impl ClientState {
         } else {
             None
         }
+    }
+
+    pub fn set_map(&mut self, map: Map) {
+        self.map = Some(map);
     }
 }
