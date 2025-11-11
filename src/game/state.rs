@@ -1,6 +1,9 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+use crate::map::Map;
+use rand::Rng;
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct Player {
     pub id: u32,
@@ -30,10 +33,11 @@ impl GameState {
 
     pub fn create_map(&mut self) {}
 
-    pub fn create_player(&mut self) -> Player {
+    pub fn create_player(&mut self, map: &Map) -> Player {
         let id = self.next_id();
-        let x = 1.0;
-        let y = 1.0;
+        let mut rng = rand::thread_rng();
+        let x = rng.gen_range(0..map.width) as f32;
+        let y = rng.gen_range(0..map.height) as f32;
         let player = Player { id, x, y };
         self.players.insert(id, player.clone());
 

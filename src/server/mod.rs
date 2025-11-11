@@ -58,7 +58,7 @@ pub fn run_server(port: String) {
             match msg {
                 ClientMessage::Init => {
                     println!("Player init");
-                    let player = game_state.lock().unwrap().create_player();
+                    let player = game_state.lock().unwrap().create_player(&map);
                     player_id = Some(player.id);
                     let _ = tx
                         .send(ServerMessage::Map(map.clone()))
