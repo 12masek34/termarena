@@ -87,19 +87,35 @@ async fn main() {
         let mut dx: f32 = 0.0;
         let mut dy: f32 = 0.0;
 
-        if is_key_down(KeyCode::W) {
+        if is_key_down(KeyCode::W) || is_key_down(KeyCode::Up) {
             dy -= 1.0;
             moved = true;
         }
-        if is_key_down(KeyCode::S) {
+        if is_key_down(KeyCode::S) || is_key_down(KeyCode::Down) {
             dy += 1.0;
             moved = true;
         }
-        if is_key_down(KeyCode::A) {
+        if is_key_down(KeyCode::A) || is_key_down(KeyCode::Left) {
             dx -= 1.0;
             moved = true;
         }
-        if is_key_down(KeyCode::D) {
+        if is_key_down(KeyCode::D) || is_key_down(KeyCode::Right) {
+            dx += 1.0;
+            moved = true;
+        }
+        if is_key_down(KeyCode::H) {
+            dx -= 1.0;
+            moved = true;
+        }
+        if is_key_down(KeyCode::J) {
+            dy += 1.0;
+            moved = true;
+        }
+        if is_key_down(KeyCode::K) {
+            dy -= 1.0;
+            moved = true;
+        }
+        if is_key_down(KeyCode::L) {
             dx += 1.0;
             moved = true;
         }
