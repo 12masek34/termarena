@@ -5,6 +5,8 @@ use std::{
     sync::mpsc::{self, Receiver, Sender},
     thread,
 };
+use termarena::network::recv_message;
+use termarena::network::state::ServerMessage;
 use termarena::network::{send_message, state::ClientMessage};
 
 #[macroquad::main("Client")]
@@ -17,15 +19,29 @@ async fn main() {
     let server_addr: SocketAddr = server_addr_str.parse().unwrap();
     let (tx, rx): (Sender<ClientMessage>, Receiver<ClientMessage>) = mpsc::channel();
     let socket = UdpSocket::bind("0.0.0.0:0").expect("Failed to bind client socket");
+
     socket
         .set_nonblocking(true)
         .expect("Failed to set nonblocking");
     send_message(&socket, &ClientMessage::Init, server_addr);
-    let socket_clone = socket.try_clone().unwrap();
+
+    let socket_clone_recv = socket.try_clone().unwrap();
+    socket_clone_recv.set_nonblocking(false).unwrap();
+
+    let tx_clone = tx.clone();
+    thread::spawn(move || {
+        loop {
+            if let Some((msg, addr)) = recv_message::<ServerMessage>(&socket_clone_recv) {
+                println!("Received from {}: {:?}", addr, msg);
+            }
+        }
+    });
+
+    let socket_clone_send = socket.try_clone().unwrap();
 
     thread::spawn(move || {
         while let Ok(msg) = rx.recv() {
-            let _ = send_message(&socket_clone, &msg, server_addr);
+            let _ = send_message(&socket_clone_send, &msg, server_addr);
         }
     });
 

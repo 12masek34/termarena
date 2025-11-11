@@ -8,7 +8,7 @@ use std::{
 };
 
 use crate::{
-    game::state::GameState,
+    game::state::{GameState, Player},
     network::{
         recv_message, send_message,
         state::{ClientMessage, ServerMessage},
@@ -47,12 +47,19 @@ pub fn run_server(port: String) {
         });
     }
 
+    let socket_clone_init = socket.try_clone().unwrap();
     loop {
-        if let Some((msg, src)) = recv_message(&socket) {
+        if let Some((msg, src)) = recv_message::<ClientMessage>(&socket) {
             let mut clients_guard = clients.lock().unwrap();
+
             if !clients_guard.contains(&src) {
                 clients_guard.push(src);
                 println!("New client: {}", src);
+                send_message(
+                    &socket_clone_init,
+                    &ServerMessage::InitPlayer(Player { id: 1, x: 1, y: 1 }),
+                    src,
+                );
             }
 
             let mut gs = game_state.lock().unwrap();

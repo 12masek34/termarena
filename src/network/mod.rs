@@ -3,19 +3,23 @@ use std::net::SocketAddr;
 use std::net::UdpSocket;
 
 use serde::Serialize;
+use serde::de::DeserializeOwned;
 use state::{ClientMessage, ServerMessage};
 
-pub fn recv_message(socket: &UdpSocket) -> Option<(ClientMessage, SocketAddr)> {
+pub fn recv_message<T: DeserializeOwned>(socket: &UdpSocket) -> Option<(T, SocketAddr)> {
     let mut buf = [0u8; 1024];
     match socket.recv_from(&mut buf) {
-        Ok((amt, src)) => match bincode::deserialize::<ClientMessage>(&buf[..amt]) {
+        Ok((amt, src)) => match bincode::deserialize::<T>(&buf[..amt]) {
             Ok(msg) => Some((msg, src)),
             Err(e) => {
-                eprintln!("Failed to deserialize ClientMessage: {:?}", e);
+                eprintln!("Failed to deserialize message: {:?}", e);
                 None
             }
         },
-        Err(_) => None,
+        Err(e) => {
+            eprintln!("Failed to receive from socket: {:?}", e);
+            None
+        }
     }
 }
 
