@@ -63,27 +63,37 @@ async fn main() {
 
     loop {
         clear_background(BLACK);
-        let (gs, map, current_id, player_pos) = {
-            let locked_client = client_state.lock().unwrap();
-            let player = match locked_client.get_current_player() {
-                Some(p) => p.clone(),
-                None => continue,
-            };
-            let gs = match &locked_client.game_state {
-                Some(gs) => gs.clone(),
-                None => continue,
-            };
-            let map = match &locked_client.map {
-                Some(map) => map.clone(),
-                None => continue,
-            };
-            (gs, map, locked_client.id, (player.x, player.y))
-        };
 
         let (dx, dy) = listem_move();
         if let (Some(dx), Some(dy)) = (dx, dy) {
             let _ = tx.send(ClientMessage::Move(dx, dy));
         }
+
+        let (gs_arc, map_arc, current_id, player_pos) = {
+            let locked_client = client_state.lock().unwrap();
+            let player = match locked_client.get_current_player() {
+                Some(p) => p.clone(),
+                None => {
+                    next_frame().await;
+                    continue;
+                }
+            };
+            let gs_arc = match &locked_client.game_state {
+                Some(gs) => Arc::clone(gs),
+                None => {
+                    next_frame().await;
+                    continue;
+                }
+            };
+            let map_arc = match &locked_client.map {
+                Some(map) => Arc::clone(map),
+                None => {
+                    next_frame().await;
+                    continue;
+                }
+            };
+            (gs_arc, map_arc, locked_client.id, (player.x, player.y))
+        };
 
         let tile_size = 10.0;
         let screen_center_x = screen_width() / 2.0;
@@ -95,8 +105,8 @@ async fn main() {
         let start_x = (player_pos.0 as isize - (tiles_in_x / 2) as isize).max(0) as usize;
         let start_y = (player_pos.1 as isize - (tiles_in_y / 2) as isize).max(0) as usize;
 
-        let end_x = (start_x + tiles_in_x).min(map.width);
-        let end_y = (start_y + tiles_in_y).min(map.height);
+        let end_x = (start_x + tiles_in_x).min(map_arc.width);
+        let end_y = (start_y + tiles_in_y).min(map_arc.height);
 
         let offset_x = screen_center_x - player_pos.0 * tile_size;
         let offset_y = screen_center_y - player_pos.1 * tile_size;
@@ -105,14 +115,14 @@ async fn main() {
             for x in start_x..end_x {
                 let draw_x = x as f32 * tile_size + offset_x;
                 let draw_y = y as f32 * tile_size + offset_y;
-                match map.tiles[y][x] {
+                match map_arc.tiles[y][x] {
                     Tile::Empty => draw_rectangle(draw_x, draw_y, tile_size, tile_size, BLACK),
                     Tile::Wall => draw_rectangle(draw_x, draw_y, tile_size, tile_size, WHITE),
                 }
             }
         }
 
-        for player in gs.players.values() {
+        for player in gs_arc.players.values() {
             let draw_x = player.x * tile_size + offset_x;
             let draw_y = player.y * tile_size + offset_y;
             let color = if Some(player.id) == current_id {

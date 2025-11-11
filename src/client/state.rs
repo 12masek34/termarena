@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::{
     game::state::{GameState, Player},
     map::Map,
@@ -6,8 +8,8 @@ use crate::{
 #[derive(Debug)]
 pub struct ClientState {
     pub id: Option<u32>,
-    pub map: Option<Map>,
-    pub game_state: Option<GameState>,
+    pub map: Option<Arc<Map>>,
+    pub game_state: Option<Arc<GameState>>,
 }
 
 impl ClientState {
@@ -26,7 +28,7 @@ impl ClientState {
     }
 
     pub fn update_state(&mut self, state: GameState) {
-        self.game_state = Some(state);
+        self.game_state = Some(Arc::new(state));
     }
 
     pub fn get_current_player(&self) -> Option<Player> {
@@ -39,7 +41,7 @@ impl ClientState {
 
     pub fn set_map(&mut self, map: Map) {
         if self.map.is_none() {
-            self.map = Some(map);
+            self.map = Some(Arc::new(map));
         }
     }
 }
