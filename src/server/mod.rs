@@ -55,9 +55,17 @@ pub fn run_server(port: String) {
                     println!("Player init");
                     let player = game_state.lock().unwrap().create_player();
                     player_id = Some(player.id);
-                    tx.send((ServerMessage::Map, src))
+                    let _ = tx
+                        .send((ServerMessage::Map, src))
                         .expect("failed to send to net thread");
-                    tx.send((ServerMessage::InitPlayer(player), src))
+                    let _ = tx
+                        .send((ServerMessage::InitPlayer(player), src))
+                        .expect("failed to send to net thread");
+                    let _ = tx
+                        .send((
+                            ServerMessage::GameState(game_state.lock().unwrap().clone()),
+                            src,
+                        ))
                         .expect("failed to send to net thread");
                 }
                 ClientMessage::Quit => {
@@ -66,7 +74,7 @@ pub fn run_server(port: String) {
                 ClientMessage::Move(x, y) => {
                     println!("Move");
                     game_state.lock().unwrap().move_player(player_id, x, y);
-                    tx.send((
+                    let _ = tx.send((
                         ServerMessage::GameState(game_state.lock().unwrap().clone()),
                         src,
                     ));

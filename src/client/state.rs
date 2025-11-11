@@ -21,4 +21,12 @@ impl ClientState {
     pub fn update_state(&mut self, state: GameState) {
         self.game_state = Some(state);
     }
+
+    pub fn get_current_player(&self) -> Option<Player> {
+        if let Some(gs) = &self.game_state {
+            self.id.and_then(|id| gs.players.get(&id).cloned())
+        } else {
+            None
+        }
+    }
 }
