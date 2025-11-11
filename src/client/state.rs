@@ -20,7 +20,9 @@ impl ClientState {
     }
 
     pub fn init_player(&mut self, player: Player) {
-        self.id = Some(player.id);
+        if self.id.is_none() {
+            self.id = Some(player.id);
+        }
     }
 
     pub fn update_state(&mut self, state: GameState) {
@@ -36,6 +38,8 @@ impl ClientState {
     }
 
     pub fn set_map(&mut self, map: Map) {
-        self.map = Some(map);
+        if self.map.is_none() {
+            self.map = Some(map);
+        }
     }
 }

@@ -74,7 +74,6 @@ pub fn run_server(port: String) {
                     println!("Player disconnected");
                 }
                 ClientMessage::Move(x, y) => {
-                    println!("Move");
                     game_state.lock().unwrap().move_player(player_id, x, y);
                     let _ = tx.send(ServerMessage::GameState(game_state.lock().unwrap().clone()));
                 }
