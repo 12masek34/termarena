@@ -1,8 +1,10 @@
+use macroquad::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 use crate::map::Map;
-use rand::Rng;
+use ::rand::Rng;
+use ::rand::thread_rng;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct Player {
@@ -35,7 +37,7 @@ impl GameState {
 
     pub fn create_player(&mut self, map: &Map) -> Player {
         let id = self.next_id();
-        let mut rng = rand::thread_rng();
+        let mut rng = thread_rng();
         let x = rng.gen_range(0..map.width) as f32;
         let y = rng.gen_range(0..map.height) as f32;
         let player = Player { id, x, y };
@@ -50,6 +52,23 @@ impl GameState {
                 player.x += x;
                 player.y += y;
             }
+        }
+    }
+
+    pub fn render(&self, current_id: Option<u32>, player_pos: (f32, f32)) {
+        let tile_size = 10.0;
+        let offset_x = screen_width() / 2.0 - player_pos.0 * tile_size;
+        let offset_y = screen_height() / 2.0 - player_pos.1 * tile_size;
+
+        for player in self.players.values() {
+            let draw_x = player.x * tile_size + offset_x;
+            let draw_y = player.y * tile_size + offset_y;
+            let color = if Some(player.id) == current_id {
+                BLUE
+            } else {
+                RED
+            };
+            draw_circle(draw_x, draw_y, tile_size, color);
         }
     }
 }
