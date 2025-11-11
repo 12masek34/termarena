@@ -31,13 +31,16 @@ async fn main() {
     let socket_clone_recv = socket.try_clone().unwrap();
     socket_clone_recv.set_nonblocking(false).unwrap();
 
-    let tx_clone = tx.clone();
     thread::spawn(move || {
         loop {
             if let Some((msg, addr)) = recv_message::<ServerMessage>(&socket_clone_recv) {
                 match msg {
+                    ServerMessage::Map => {
+                        println!("MAP");
+                    }
                     ServerMessage::InitPlayer(player) => {
                         client_state.lock().unwrap().init_player(player);
+                        println!("{:?}", client_state)
                     }
                     ServerMessage::GameState(state) => {
                         println!("{:?}", client_state)

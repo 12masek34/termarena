@@ -4,6 +4,7 @@ use crate::game::state::{GameState, Player};
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub enum ServerMessage {
+    Map,
     InitPlayer(Player),
     GameState(GameState),
 }

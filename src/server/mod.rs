@@ -8,7 +8,7 @@ use std::{
 };
 
 use crate::{
-    game::state::{GameState, Player},
+    game::state::GameState,
     network::{
         recv_message, send_message,
         state::{ClientMessage, ServerMessage},
@@ -29,25 +29,17 @@ pub fn run_server(port: String) {
 
     println!("Server running on port {}", port);
 
-    let (tx, rx) = mpsc::channel::<()>();
+    let (tx, rx) = mpsc::channel::<(ServerMessage, SocketAddr)>();
 
     {
-        let gs_clone = Arc::clone(&game_state);
-        let clients_clone = Arc::clone(&clients);
         let socket_clone = socket.try_clone().unwrap();
         thread::spawn(move || {
-            while rx.recv().is_ok() {
-                let gs = gs_clone.lock().unwrap();
-                let clients_guard = clients_clone.lock().unwrap();
-                for &client in clients_guard.iter() {
-                    let _ =
-                        send_message(&socket_clone, &ServerMessage::GameState(gs.clone()), client);
-                }
+            for (msg, target) in rx {
+                send_message(&socket_clone, &msg, target);
             }
         });
     }
 
-    let socket_clone_init = socket.try_clone().unwrap();
     loop {
         if let Some((msg, src)) = recv_message::<ClientMessage>(&socket) {
             let mut clients_guard = clients.lock().unwrap();
@@ -55,28 +47,28 @@ pub fn run_server(port: String) {
             if !clients_guard.contains(&src) {
                 clients_guard.push(src);
                 println!("New client: {}", src);
-                let new_player = game_state.lock().unwrap().create_player();
-                send_message(
-                    &socket_clone_init,
-                    &ServerMessage::InitPlayer(new_player),
-                    src,
-                );
             }
 
-            let mut gs = game_state.lock().unwrap();
             match msg {
                 ClientMessage::Init => {
                     println!("Player init");
+                    let player = game_state.lock().unwrap().create_player();
+                    tx.send((ServerMessage::Map, src))
+                        .expect("failed to send to net thread");
+                    tx.send((ServerMessage::InitPlayer(player), src))
+                        .expect("failed to send to net thread");
                 }
                 ClientMessage::Quit => {
                     println!("Player disconnected");
                 }
                 ClientMessage::Move(x, y) => {
                     println!("Move");
+                    tx.send((
+                        ServerMessage::GameState(game_state.lock().unwrap().clone()),
+                        src,
+                    ));
                 }
             }
-
-            let _ = tx.send(());
         }
     }
 }

@@ -1,14 +1,14 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct Player {
     pub id: u32,
-    pub x: usize,
-    pub y: usize,
+    pub x: f32,
+    pub y: f32,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct GameState {
     pub players: HashMap<u32, Player>,
 }
@@ -28,10 +28,12 @@ impl GameState {
         self.players.remove(&id);
     }
 
+    pub fn create_map(&mut self) {}
+
     pub fn create_player(&self) -> Player {
         let id = self.next_id();
-        let x = 1;
-        let y = 1;
+        let x = 1.0;
+        let y = 1.0;
         Player { id, x, y }
     }
 }
