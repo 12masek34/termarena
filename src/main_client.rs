@@ -8,7 +8,6 @@ use std::{
 };
 use termarena::client::key_event_handler::listem_move;
 use termarena::client::state::ClientState;
-use termarena::map::Tile;
 use termarena::network::recv_message;
 use termarena::network::state::ServerMessage;
 use termarena::network::{send_message, state::ClientMessage};
@@ -95,43 +94,14 @@ async fn main() {
             (gs_arc, map_arc, locked_client.id, (player.x, player.y))
         };
 
-        let tile_size = 10.0;
-        let screen_center_x = screen_width() / 2.0;
-        let screen_center_y = screen_height() / 2.0;
-
-        let tiles_in_x = (screen_width() / tile_size).ceil() as usize;
-        let tiles_in_y = (screen_height() / tile_size).ceil() as usize;
-
-        let start_x = (player_pos.0 as isize - (tiles_in_x / 2) as isize).max(0) as usize;
-        let start_y = (player_pos.1 as isize - (tiles_in_y / 2) as isize).max(0) as usize;
-
-        let end_x = (start_x + tiles_in_x).min(map_arc.width);
-        let end_y = (start_y + tiles_in_y).min(map_arc.height);
-
-        let offset_x = screen_center_x - player_pos.0 * tile_size;
-        let offset_y = screen_center_y - player_pos.1 * tile_size;
-
-        for y in start_y..end_y {
-            for x in start_x..end_x {
-                let draw_x = x as f32 * tile_size + offset_x;
-                let draw_y = y as f32 * tile_size + offset_y;
-                match map_arc.tiles[y][x] {
-                    Tile::Empty => draw_rectangle(draw_x, draw_y, tile_size, tile_size, BLACK),
-                    Tile::Wall => draw_rectangle(draw_x, draw_y, tile_size, tile_size, WHITE),
-                }
-            }
-        }
-
-        for player in gs_arc.players.values() {
-            let draw_x = player.x * tile_size + offset_x;
-            let draw_y = player.y * tile_size + offset_y;
-            let color = if Some(player.id) == current_id {
-                BLUE
-            } else {
-                RED
-            };
-            draw_circle(draw_x, draw_y, tile_size, color);
-        }
+        client_state
+            .lock()
+            .unwrap()
+            .render_map(&map_arc, player_pos);
+        client_state
+            .lock()
+            .unwrap()
+            .render_game_state(&gs_arc, current_id, player_pos);
 
         next_frame().await;
     }
