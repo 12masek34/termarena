@@ -94,7 +94,7 @@ async fn main() {
             (gs_arc, map_arc, locked_client.id, (player.x, player.y))
         };
 
-        map_arc.render(player_pos);
+        map_arc.lock().unwrap().render(player_pos);
         gs_arc.render(current_id, player_pos);
 
         next_frame().await;

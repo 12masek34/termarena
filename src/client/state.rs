@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use crate::{
     game::state::{GameState, Player},
@@ -8,7 +8,7 @@ use crate::{
 #[derive(Debug)]
 pub struct ClientState {
     pub id: Option<u32>,
-    pub map: Option<Arc<Map>>,
+    pub map: Option<Arc<Mutex<Map>>>,
     pub game_state: Option<Arc<GameState>>,
 }
 
@@ -41,7 +41,7 @@ impl ClientState {
 
     pub fn set_map(&mut self, map: Map) {
         if self.map.is_none() {
-            self.map = Some(Arc::new(map));
+            self.map = Some(Arc::new(Mutex::new(map)));
         }
     }
 }
