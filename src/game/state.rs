@@ -46,11 +46,17 @@ impl GameState {
         player
     }
 
-    pub fn move_player(&mut self, player_id: Option<u32>, x: f32, y: f32) {
+    pub fn move_player(&mut self, player_id: Option<u32>, x: f32, y: f32, map: &Map) {
+        let speed = 0.5;
         if let Some(id) = player_id {
             if let Some(player) = self.players.get_mut(&id) {
-                player.x += x;
-                player.y += y;
+                let new_x = player.x + x * speed;
+                let new_y = player.y + y * speed;
+
+                if !map.is_wall(new_x, new_y) {
+                    player.x = new_x;
+                    player.y = new_y;
+                }
             }
         }
     }

@@ -70,12 +70,15 @@ pub fn run_server(port: String) {
                         .send(ServerMessage::GameState(game_state.lock().unwrap().clone()))
                         .expect("failed to send to net thread");
                 }
+                ClientMessage::Move(x, y) => {
+                    game_state
+                        .lock()
+                        .unwrap()
+                        .move_player(player_id, x, y, &map);
+                    let _ = tx.send(ServerMessage::GameState(game_state.lock().unwrap().clone()));
+                }
                 ClientMessage::Quit => {
                     println!("Player disconnected");
-                }
-                ClientMessage::Move(x, y) => {
-                    game_state.lock().unwrap().move_player(player_id, x, y);
-                    let _ = tx.send(ServerMessage::GameState(game_state.lock().unwrap().clone()));
                 }
             }
         }

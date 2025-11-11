@@ -3,7 +3,7 @@ use ::rand::thread_rng;
 use macroquad::prelude::*;
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub enum Tile {
     Empty,
     Wall,
@@ -41,8 +41,43 @@ impl Map {
         }
     }
 
+    pub fn is_wall(&self, x: f32, y: f32) -> bool {
+        let size = 1.0;
+        let half = size / 2.0;
+
+        let corners = [
+            (x - half, y - half),
+            (x + half, y - half),
+            (x - half, y + half),
+            (x + half, y + half),
+        ];
+
+        for &(cx, cy) in &corners {
+            if cx < 0.0 || cx >= self.width as f32 || cy < 0.0 || cy >= self.height as f32 {
+                return true;
+            }
+
+            let tx = if cx > x {
+                (cx.ceil() - 1.0) as usize
+            } else {
+                cx.floor() as usize
+            };
+            let ty = if cy > y {
+                (cy.ceil() - 1.0) as usize
+            } else {
+                cy.floor() as usize
+            };
+
+            if self.tiles[ty][tx] == Tile::Wall {
+                return true;
+            }
+        }
+
+        false
+    }
+
     pub fn render(&mut self, player_pos: (f32, f32)) {
-        let tile_size = 10.0;
+        let tile_size = 20.0;
         let screen_center_x = screen_width() / 2.0;
         let screen_center_y = screen_height() / 2.0;
 
