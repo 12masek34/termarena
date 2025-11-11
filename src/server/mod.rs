@@ -30,16 +30,19 @@ pub fn run_server(port: String) {
 
     println!("Server running on port {}", port);
 
-    let (tx, rx) = mpsc::channel::<(ServerMessage, SocketAddr)>();
+    let (tx, rx) = mpsc::channel::<ServerMessage>();
 
-    {
-        let socket_clone = socket.try_clone().unwrap();
-        thread::spawn(move || {
-            for (msg, target) in rx {
-                send_message(&socket_clone, &msg, target);
+    let clients_clone = Arc::clone(&clients);
+    let socket_clone = socket.try_clone().unwrap();
+
+    thread::spawn(move || {
+        for msg in rx {
+            let clients_guard = clients_clone.lock().unwrap();
+            for &client in clients_guard.iter() {
+                let _ = send_message(&socket_clone, &msg, client);
             }
-        });
-    }
+        }
+    });
 
     loop {
         if let Some((msg, src)) = recv_message::<ClientMessage>(&socket) {
@@ -56,16 +59,13 @@ pub fn run_server(port: String) {
                     let player = game_state.lock().unwrap().create_player();
                     player_id = Some(player.id);
                     let _ = tx
-                        .send((ServerMessage::Map, src))
+                        .send(ServerMessage::Map)
                         .expect("failed to send to net thread");
                     let _ = tx
-                        .send((ServerMessage::InitPlayer(player), src))
+                        .send(ServerMessage::InitPlayer(player))
                         .expect("failed to send to net thread");
                     let _ = tx
-                        .send((
-                            ServerMessage::GameState(game_state.lock().unwrap().clone()),
-                            src,
-                        ))
+                        .send(ServerMessage::GameState(game_state.lock().unwrap().clone()))
                         .expect("failed to send to net thread");
                 }
                 ClientMessage::Quit => {
@@ -74,10 +74,7 @@ pub fn run_server(port: String) {
                 ClientMessage::Move(x, y) => {
                     println!("Move");
                     game_state.lock().unwrap().move_player(player_id, x, y);
-                    let _ = tx.send((
-                        ServerMessage::GameState(game_state.lock().unwrap().clone()),
-                        src,
-                    ));
+                    let _ = tx.send(ServerMessage::GameState(game_state.lock().unwrap().clone()));
                 }
             }
         }
