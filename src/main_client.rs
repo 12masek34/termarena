@@ -36,7 +36,7 @@ async fn main() {
 
     thread::spawn(move || {
         loop {
-            if let Some((msg, addr)) = recv_message::<ServerMessage>(&socket_clone_recv) {
+            if let Some((msg, _addr)) = recv_message::<ServerMessage>(&socket_clone_recv) {
                 match msg {
                     ServerMessage::Map(map) => {
                         client_state_clone.lock().unwrap().set_map(map);
@@ -48,7 +48,6 @@ async fn main() {
                     }
                     ServerMessage::GameState(state) => {
                         client_state_clone.lock().unwrap().update_state(state);
-                        // println!("{:?}", client_state_clone);
                     }
                 }
             }
@@ -56,7 +55,6 @@ async fn main() {
     });
 
     let socket_clone_send = socket.try_clone().unwrap();
-
     thread::spawn(move || {
         while let Ok(msg) = rx.recv() {
             let _ = send_message(&socket_clone_send, &msg, server_addr);
@@ -65,29 +63,24 @@ async fn main() {
 
     loop {
         clear_background(BLACK);
-
-        let current_player_opt = {
+        let (gs, map, current_id, player_pos) = {
             let locked_client = client_state.lock().unwrap();
-            locked_client.get_current_player()
-        };
-
-        let player_pos = if let Some(player) = current_player_opt {
-            (player.x, player.y)
-        } else {
-            continue;
-        };
-
-        let (gs, current_id) = {
-            let locked_client = client_state.lock().unwrap();
+            let player = match locked_client.get_current_player() {
+                Some(p) => p.clone(),
+                None => continue,
+            };
             let gs = match &locked_client.game_state {
                 Some(gs) => gs.clone(),
                 None => continue,
             };
-            (gs, locked_client.id)
+            let map = match &locked_client.map {
+                Some(map) => map.clone(),
+                None => continue,
+            };
+            (gs, map, locked_client.id, (player.x, player.y))
         };
 
         let (dx, dy) = listem_move();
-
         if let (Some(dx), Some(dy)) = (dx, dy) {
             let _ = tx.send(ClientMessage::Move(dx, dy));
         }
@@ -95,19 +88,24 @@ async fn main() {
         let tile_size = 10.0;
         let screen_center_x = screen_width() / 2.0;
         let screen_center_y = screen_height() / 2.0;
+
+        let tiles_in_x = (screen_width() / tile_size).ceil() as usize;
+        let tiles_in_y = (screen_height() / tile_size).ceil() as usize;
+
+        let start_x = (player_pos.0 as isize - (tiles_in_x / 2) as isize).max(0) as usize;
+        let start_y = (player_pos.1 as isize - (tiles_in_y / 2) as isize).max(0) as usize;
+
+        let end_x = (start_x + tiles_in_x).min(map.width);
+        let end_y = (start_y + tiles_in_y).min(map.height);
+
         let offset_x = screen_center_x - player_pos.0 * tile_size;
         let offset_y = screen_center_y - player_pos.1 * tile_size;
-        let locked_client = client_state.lock().unwrap();
-        let map = match &locked_client.map {
-            Some(map) => map,
-            None => continue,
-        };
 
-        for (y, row) in map.tiles.iter().enumerate() {
-            for (x, tile) in row.iter().enumerate() {
+        for y in start_y..end_y {
+            for x in start_x..end_x {
                 let draw_x = x as f32 * tile_size + offset_x;
                 let draw_y = y as f32 * tile_size + offset_y;
-                match tile {
+                match map.tiles[y][x] {
                     Tile::Empty => draw_rectangle(draw_x, draw_y, tile_size, tile_size, BLACK),
                     Tile::Wall => draw_rectangle(draw_x, draw_y, tile_size, tile_size, WHITE),
                 }
