@@ -30,10 +30,13 @@ impl GameState {
 
     pub fn create_map(&mut self) {}
 
-    pub fn create_player(&self) -> Player {
+    pub fn create_player(&mut self) -> Player {
         let id = self.next_id();
         let x = 1.0;
         let y = 1.0;
-        Player { id, x, y }
+        let player = Player { id, x, y };
+        self.players.insert(id, player.clone());
+
+        player
     }
 }
