@@ -30,6 +30,8 @@ pub struct Player {
     pub bullet_speed: f32,
     pub bullet_range: f32,
     pub bullet_damage: u32,
+    pub health: u32,
+    pub hit_radius: f32,
 }
 
 impl Player {
@@ -50,6 +52,7 @@ pub struct Bullet {
     pub range: f32,
     pub traveled: f32,
     pub damage: u32,
+    pub hit_radius: f32,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -99,6 +102,8 @@ impl GameState {
             bullet_speed: 1.0,
             bullet_range: 15.0,
             bullet_damage: 1,
+            health: 3,
+            hit_radius: 0.5,
         };
         self.players.insert(id, player.clone());
 
@@ -158,6 +163,7 @@ impl GameState {
                     range: player.bullet_range,
                     traveled: 0.0,
                     damage: player.bullet_damage,
+                    hit_radius: player.hit_radius,
                 };
 
                 self.bullets.insert(bullet.id, bullet);
@@ -180,7 +186,17 @@ impl GameState {
                 to_remove.push(bullet.id);
             }
 
-            // TODO: столкновения с игроками — позже
+            for (player_id, player) in self.players.iter_mut() {
+                if bullet.owner_id != *player_id {
+                    let dx = bullet.x - player.x;
+                    let dy = bullet.y - player.y;
+                    if (dx * dx + dy * dy).sqrt() < bullet.hit_radius {
+                        player.health = player.health.saturating_sub(bullet.damage);
+                        to_remove.push(bullet.id);
+                        break;
+                    }
+                }
+            }
         }
 
         for id in to_remove {
