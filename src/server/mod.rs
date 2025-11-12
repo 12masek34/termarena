@@ -7,6 +7,7 @@ use std::{
     thread,
 };
 
+use crate::config;
 use crate::{
     game::state::GameState,
     map::Map,
@@ -25,7 +26,7 @@ pub fn run_server(port: String) {
         .set_nonblocking(false)
         .expect("Failed to set blocking mode");
 
-    let map = Map::new(100, 100);
+    let map = Map::new(config::MAP_WIDTH, config::MAP_HEIGHT);
     let game_state: SharedGameState = Arc::new(Mutex::new(GameState::new()));
     let clients: SharedClients = Arc::new(Mutex::new(Vec::new()));
     let mut player_id: Option<u32> = None;

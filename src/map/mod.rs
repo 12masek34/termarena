@@ -1,3 +1,4 @@
+use crate::config::{TILE_SIZE, WALL_PROBABILITY};
 use ::rand::distributions::{Distribution, Uniform};
 use ::rand::thread_rng;
 use macroquad::prelude::*;
@@ -29,7 +30,11 @@ impl Map {
         for y in 0..height {
             for x in 0..width {
                 let roll = uniform.sample(&mut rng);
-                tiles[y][x] = if roll < 0.05 { Tile::Wall } else { Tile::Empty };
+                tiles[y][x] = if roll < WALL_PROBABILITY {
+                    Tile::Wall
+                } else {
+                    Tile::Empty
+                };
             }
         }
 
@@ -77,7 +82,7 @@ impl Map {
     }
 
     pub fn render(&mut self, player_pos: (f32, f32)) {
-        let tile_size = 20.0;
+        let tile_size = TILE_SIZE;
         let screen_center_x = screen_width() / 2.0;
         let screen_center_y = screen_height() / 2.0;
 

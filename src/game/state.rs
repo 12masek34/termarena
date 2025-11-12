@@ -2,6 +2,7 @@ use macroquad::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+use crate::config;
 use crate::map::Map;
 use ::rand::Rng;
 use ::rand::thread_rng;
@@ -47,11 +48,10 @@ impl GameState {
     }
 
     pub fn move_player(&mut self, player_id: Option<u32>, x: f32, y: f32, map: &Map) {
-        let speed = 0.5;
         if let Some(id) = player_id {
             if let Some(player) = self.players.get_mut(&id) {
-                let new_x = player.x + x * speed;
-                let new_y = player.y + y * speed;
+                let new_x = player.x + x * config::PLAYER_SPEED;
+                let new_y = player.y + y * config::PLAYER_SPEED;
 
                 if !map.is_wall(new_x, new_y) {
                     player.x = new_x;
@@ -62,19 +62,18 @@ impl GameState {
     }
 
     pub fn render(&self, current_id: Option<u32>, player_pos: (f32, f32)) {
-        let tile_size = 10.0;
-        let offset_x = screen_width() / 2.0 - player_pos.0 * tile_size;
-        let offset_y = screen_height() / 2.0 - player_pos.1 * tile_size;
+        let offset_x = screen_width() / 2.0 - player_pos.0 * config::PLAYER_SIZE;
+        let offset_y = screen_height() / 2.0 - player_pos.1 * config::PLAYER_SIZE;
 
         for player in self.players.values() {
-            let draw_x = player.x * tile_size + offset_x;
-            let draw_y = player.y * tile_size + offset_y;
+            let draw_x = player.x * config::PLAYER_SIZE + offset_x;
+            let draw_y = player.y * config::PLAYER_SIZE + offset_y;
             let color = if Some(player.id) == current_id {
                 BLUE
             } else {
                 RED
             };
-            draw_circle(draw_x, draw_y, tile_size, color);
+            draw_circle(draw_x, draw_y, config::PLAYER_SIZE, color);
         }
     }
 }
