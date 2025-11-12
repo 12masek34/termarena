@@ -9,21 +9,46 @@ use ::rand::Rng;
 use ::rand::thread_rng;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub enum Direction {
+    Up,
+    Down,
+    Left,
+    Right,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct Player {
     pub id: u32,
     pub x: f32,
     pub y: f32,
+    pub direction: Direction,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct Bullet {
+    pub id: u32,
+    pub owner_id: u32,
+    pub x: f32,
+    pub y: f32,
+    pub dx: f32,
+    pub dy: f32,
+    pub speed: f32,
+    pub range: f32,
+    pub traveled: f32,
+    pub damage: u32,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct GameState {
     pub players: HashMap<u32, Player>,
+    pub bullets: HashMap<u32, Bullet>,
 }
 
 impl GameState {
     pub fn new() -> Self {
         Self {
             players: HashMap::new(),
+            bullets: HashMap::new(),
         }
     }
 
@@ -50,7 +75,12 @@ impl GameState {
                 break (x as f32, y as f32);
             }
         };
-        let player = Player { id, x, y };
+        let player = Player {
+            id,
+            x,
+            y,
+            direction: Direction::Up,
+        };
         self.players.insert(id, player.clone());
 
         player
@@ -59,6 +89,15 @@ impl GameState {
     pub fn move_player(&mut self, player_id: Option<u32>, x: f32, y: f32, map: &Map) {
         if let Some(id) = player_id {
             if let Some(player) = self.players.get_mut(&id) {
+                if x > 0.0 {
+                    player.direction = Direction::Right;
+                } else if x < 0.0 {
+                    player.direction = Direction::Left;
+                } else if y > 0.0 {
+                    player.direction = Direction::Down;
+                } else if y < 0.0 {
+                    player.direction = Direction::Up;
+                }
                 let new_x = player.x + x * config::PLAYER_SPEED;
                 let new_y = player.y + y * config::PLAYER_SPEED;
 
@@ -68,6 +107,42 @@ impl GameState {
                 }
             }
         }
+    }
+
+    pub fn shoot(&mut self, player_id: Option<u32>) {
+        if let Some(id) = player_id {
+            if let Some(player) = self.players.get(&id) {
+                let bullet_speed = 10.0;
+                let bullet_range = 300.0;
+                let bullet_damage = 10;
+
+                let (dx, dy) = match player.direction {
+                    Direction::Up => (0.0, -1.0),
+                    Direction::Down => (0.0, 1.0),
+                    Direction::Left => (-1.0, 0.0),
+                    Direction::Right => (1.0, 0.0),
+                };
+
+                let bullet = Bullet {
+                    id: self.next_bullet_id(),
+                    owner_id: id,
+                    x: player.x,
+                    y: player.y,
+                    dx,
+                    dy,
+                    speed: bullet_speed,
+                    range: bullet_range,
+                    traveled: 0.0,
+                    damage: bullet_damage,
+                };
+
+                self.bullets.insert(bullet.id, bullet);
+            }
+        }
+    }
+
+    pub fn next_bullet_id(&self) -> u32 {
+        self.bullets.keys().max().map(|id| id + 1).unwrap_or(1)
     }
 
     pub fn render(&self, current_id: Option<u32>, player_pos: (f32, f32)) {
@@ -83,6 +158,12 @@ impl GameState {
                 RED
             };
             draw_circle(draw_x, draw_y, config::TILE_SIZE, color);
+        }
+
+        for bullet in self.bullets.values() {
+            let draw_x = bullet.x * config::TILE_SIZE + offset_x;
+            let draw_y = bullet.y * config::TILE_SIZE + offset_y;
+            draw_circle(draw_x, draw_y, config::TILE_SIZE / 4.0, DARKPURPLE);
         }
     }
 }

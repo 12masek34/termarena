@@ -12,5 +12,6 @@ pub enum ServerMessage {
 pub enum ClientMessage {
     Init,
     Quit,
-    Move(f32, f32),
+    Move { x: f32, y: f32 },
+    Shoot,
 }

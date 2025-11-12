@@ -74,11 +74,16 @@ pub fn run_server(port: String) {
                         .send(ServerMessage::GameState(snapshot))
                         .expect("failed to send to net thread");
                 }
-                ClientMessage::Move(x, y) => {
+                ClientMessage::Move { x, y } => {
                     game_state
                         .lock()
                         .unwrap()
                         .move_player(player_id, x, y, &map);
+                    let snapshot = game_state.lock().unwrap().get_snapshot();
+                    let _ = tx.send(ServerMessage::GameState(snapshot));
+                }
+                ClientMessage::Shoot => {
+                    game_state.lock().unwrap().shoot(player_id);
                     let snapshot = game_state.lock().unwrap().get_snapshot();
                     let _ = tx.send(ServerMessage::GameState(snapshot));
                 }
