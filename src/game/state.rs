@@ -112,8 +112,8 @@ impl GameState {
     pub fn shoot(&mut self, player_id: Option<u32>) {
         if let Some(id) = player_id {
             if let Some(player) = self.players.get(&id) {
-                let bullet_speed = 10.0;
-                let bullet_range = 300.0;
+                let bullet_speed = 1.0;
+                let bullet_range = 100.0;
                 let bullet_damage = 10;
 
                 let (dx, dy) = match player.direction {
@@ -143,6 +143,25 @@ impl GameState {
 
     pub fn next_bullet_id(&self) -> u32 {
         self.bullets.keys().max().map(|id| id + 1).unwrap_or(1)
+    }
+
+    pub fn update_bullets(&mut self, map: &Map) {
+        let mut to_remove = Vec::new();
+        for bullet in self.bullets.values_mut() {
+            bullet.x += bullet.dx * bullet.speed;
+            bullet.y += bullet.dy * bullet.speed;
+            bullet.traveled += bullet.speed;
+
+            if map.is_wall(bullet.x, bullet.y) || bullet.traveled >= bullet.range {
+                to_remove.push(bullet.id);
+            }
+
+            // TODO: столкновения с игроками — позже
+        }
+
+        for id in to_remove {
+            self.bullets.remove(&id);
+        }
     }
 
     pub fn render(&self, current_id: Option<u32>, player_pos: (f32, f32)) {

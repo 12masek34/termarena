@@ -5,6 +5,7 @@ use std::{
         mpsc::{self},
     },
     thread,
+    time::{Duration, Instant},
 };
 
 use crate::config;
@@ -26,7 +27,7 @@ pub fn run_server(port: String) {
         .set_nonblocking(false)
         .expect("Failed to set blocking mode");
 
-    let map = Map::new(config::MAP_WIDTH, config::MAP_HEIGHT);
+    let map = Arc::new(Map::new(config::MAP_WIDTH, config::MAP_HEIGHT));
     let game_state: SharedGameState = Arc::new(Mutex::new(GameState::new()));
     let clients: SharedClients = Arc::new(Mutex::new(Vec::new()));
     let mut player_id: Option<u32> = None;
@@ -37,7 +38,6 @@ pub fn run_server(port: String) {
 
     let clients_clone = Arc::clone(&clients);
     let socket_clone = socket.try_clone().unwrap();
-
     thread::spawn(move || {
         for msg in rx {
             let clients_snapshot = {
@@ -46,6 +46,24 @@ pub fn run_server(port: String) {
             };
             for &client in clients_snapshot.iter() {
                 let _ = send_message(&socket_clone, &msg, client);
+            }
+        }
+    });
+
+    let game_state_clone = Arc::clone(&game_state);
+    let map_clone = Arc::clone(&map);
+    let tx_clone = tx.clone();
+    thread::spawn(move || {
+        let tick_rate = Duration::from_millis(50);
+        loop {
+            let start = Instant::now();
+            game_state_clone.lock().unwrap().update_bullets(&map_clone);
+            let snapshot = game_state_clone.lock().unwrap().get_snapshot();
+            let _ = tx_clone.send(ServerMessage::GameState(snapshot));
+            let elapsed = start.elapsed();
+
+            if elapsed < tick_rate {
+                thread::sleep(tick_rate - elapsed);
             }
         }
     });
