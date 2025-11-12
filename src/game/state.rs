@@ -1,6 +1,8 @@
 use macroquad::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::time::Duration;
+use std::time::Instant;
 
 use crate::config;
 use crate::map::Map;
@@ -22,6 +24,15 @@ pub struct Player {
     pub x: f32,
     pub y: f32,
     pub direction: Direction,
+    #[serde(skip, default = "Player::default_last_shot")]
+    pub last_shot: Instant,
+    pub fire_rate: u32,
+}
+
+impl Player {
+    fn default_last_shot() -> Instant {
+        Instant::now() - Duration::from_secs(5)
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -80,6 +91,8 @@ impl GameState {
             x,
             y,
             direction: Direction::Up,
+            last_shot: Instant::now() - Duration::from_secs(5),
+            fire_rate: 1000,
         };
         self.players.insert(id, player.clone());
 
@@ -111,7 +124,16 @@ impl GameState {
 
     pub fn shoot(&mut self, player_id: Option<u32>) {
         if let Some(id) = player_id {
-            if let Some(player) = self.players.get(&id) {
+            let next_bullet_id = self.next_bullet_id();
+            if let Some(player) = self.players.get_mut(&id) {
+                let fire_rate = Duration::from_millis(player.fire_rate as u64);
+
+                if player.last_shot.elapsed() < fire_rate {
+                    return;
+                }
+
+                player.last_shot = Instant::now();
+
                 let bullet_speed = 1.0;
                 let bullet_range = 100.0;
                 let bullet_damage = 10;
@@ -124,7 +146,7 @@ impl GameState {
                 };
 
                 let bullet = Bullet {
-                    id: self.next_bullet_id(),
+                    id: next_bullet_id,
                     owner_id: id,
                     x: player.x,
                     y: player.y,
