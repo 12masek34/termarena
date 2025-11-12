@@ -4,6 +4,7 @@ use std::collections::HashMap;
 
 use crate::config;
 use crate::map::Map;
+use crate::map::Tile;
 use ::rand::Rng;
 use ::rand::thread_rng;
 
@@ -41,8 +42,14 @@ impl GameState {
     pub fn create_player(&mut self, map: &Map) -> Player {
         let id = self.next_id();
         let mut rng = thread_rng();
-        let x = rng.gen_range(0..map.width) as f32;
-        let y = rng.gen_range(0..map.height) as f32;
+        let (x, y) = loop {
+            let x = rng.gen_range(0..map.width);
+            let y = rng.gen_range(0..map.height);
+
+            if map.tiles[y][x] == Tile::Empty {
+                break (x as f32, y as f32);
+            }
+        };
         let player = Player { id, x, y };
         self.players.insert(id, player.clone());
 
