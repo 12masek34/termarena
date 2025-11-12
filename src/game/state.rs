@@ -27,6 +27,9 @@ pub struct Player {
     #[serde(skip, default = "Player::default_last_shot")]
     pub last_shot: Instant,
     pub fire_rate: u32,
+    pub bullet_speed: f32,
+    pub bullet_range: f32,
+    pub bullet_damage: u32,
 }
 
 impl Player {
@@ -93,6 +96,9 @@ impl GameState {
             direction: Direction::Up,
             last_shot: Instant::now() - Duration::from_secs(5),
             fire_rate: 1000,
+            bullet_speed: 1.0,
+            bullet_range: 15.0,
+            bullet_damage: 1,
         };
         self.players.insert(id, player.clone());
 
@@ -134,10 +140,6 @@ impl GameState {
 
                 player.last_shot = Instant::now();
 
-                let bullet_speed = 1.0;
-                let bullet_range = 100.0;
-                let bullet_damage = 10;
-
                 let (dx, dy) = match player.direction {
                     Direction::Up => (0.0, -1.0),
                     Direction::Down => (0.0, 1.0),
@@ -152,10 +154,10 @@ impl GameState {
                     y: player.y,
                     dx,
                     dy,
-                    speed: bullet_speed,
-                    range: bullet_range,
+                    speed: player.bullet_speed,
+                    range: player.bullet_range,
                     traveled: 0.0,
-                    damage: bullet_damage,
+                    damage: player.bullet_damage,
                 };
 
                 self.bullets.insert(bullet.id, bullet);
