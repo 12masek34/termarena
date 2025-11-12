@@ -87,10 +87,6 @@ pub fn run_server(port: String) {
                     let _ = tx
                         .send(ServerMessage::InitPlayer(player))
                         .expect("failed to send to net thread");
-                    let snapshot = game_state.lock().unwrap().get_snapshot();
-                    let _ = tx
-                        .send(ServerMessage::GameState(snapshot))
-                        .expect("failed to send to net thread");
                 }
                 ClientMessage::Move { x, y } => {
                     game_state
