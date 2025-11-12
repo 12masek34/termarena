@@ -102,7 +102,7 @@ impl GameState {
             bullet_speed: 1.0,
             bullet_range: 15.0,
             bullet_damage: 1,
-            health: 3,
+            health: config::PLAYER_HEALTH,
             hit_radius: 0.5,
         };
         self.players.insert(id, player.clone());
@@ -216,7 +216,7 @@ impl GameState {
             let (x, y) = map.generate_spawn_position();
             player.x = x;
             player.y = y;
-            player.health = 3;
+            player.health = config::PLAYER_HEALTH;
             player.direction = Direction::Up;
             player.last_shot = Instant::now() - Duration::from_secs(5);
         }
