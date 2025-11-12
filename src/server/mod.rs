@@ -40,8 +40,11 @@ pub fn run_server(port: String) {
 
     thread::spawn(move || {
         for msg in rx {
-            let clients_guard = clients_clone.lock().unwrap();
-            for &client in clients_guard.iter() {
+            let clients_snapshot = {
+                let clients_guard = clients_clone.lock().unwrap();
+                clients_guard.clone()
+            };
+            for &client in clients_snapshot.iter() {
                 let _ = send_message(&socket_clone, &msg, client);
             }
         }
@@ -67,8 +70,9 @@ pub fn run_server(port: String) {
                     let _ = tx
                         .send(ServerMessage::InitPlayer(player))
                         .expect("failed to send to net thread");
+                    let snapshot = game_state.lock().unwrap().get_snapshot();
                     let _ = tx
-                        .send(ServerMessage::GameState(game_state.lock().unwrap().clone()))
+                        .send(ServerMessage::GameState(snapshot))
                         .expect("failed to send to net thread");
                 }
                 ClientMessage::Move(x, y) => {
@@ -76,10 +80,20 @@ pub fn run_server(port: String) {
                         .lock()
                         .unwrap()
                         .move_player(player_id, x, y, &map);
-                    let _ = tx.send(ServerMessage::GameState(game_state.lock().unwrap().clone()));
+                    let snapshot = game_state.lock().unwrap().get_snapshot();
+                    let _ = tx.send(ServerMessage::GameState(snapshot));
                 }
                 ClientMessage::Quit => {
-                    println!("Player disconnected");
+                    println!("Player disconnected {}", src);
+                    {
+                        let mut game_state_guard = game_state.lock().unwrap();
+                        if let Some(id) = player_id {
+                            game_state_guard.remove(id);
+                        }
+                    }
+                    clients_guard.retain(|&client| client != src);
+                    let snapshot = game_state.lock().unwrap().get_snapshot();
+                    let _ = tx.send(ServerMessage::GameState(snapshot));
                 }
             }
         }

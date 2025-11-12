@@ -44,3 +44,11 @@ pub fn listem_move() -> (Option<f32>, Option<f32>) {
         (None, None)
     }
 }
+
+pub fn listen_quit() -> bool {
+    if is_key_down(KeyCode::Q) || is_key_down(KeyCode::Escape) {
+        true
+    } else {
+        false
+    }
+}

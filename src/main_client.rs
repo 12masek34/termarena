@@ -6,7 +6,7 @@ use std::{
     sync::{Arc, Mutex},
     thread,
 };
-use termarena::client::key_event_handler::listem_move;
+use termarena::client::key_event_handler::{listem_move, listen_quit};
 use termarena::client::state::ClientState;
 use termarena::network::recv_message;
 use termarena::network::state::ServerMessage;
@@ -66,6 +66,11 @@ async fn main() {
         let (dx, dy) = listem_move();
         if let (Some(dx), Some(dy)) = (dx, dy) {
             let _ = tx.send(ClientMessage::Move(dx, dy));
+        }
+
+        if listen_quit() {
+            let _ = tx.send(ClientMessage::Quit);
+            break;
         }
 
         let (gs_arc, map_arc, current_id, player_pos) = {

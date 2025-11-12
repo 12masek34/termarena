@@ -34,7 +34,9 @@ impl GameState {
         self.players.remove(&id);
     }
 
-    pub fn create_map(&mut self) {}
+    pub fn get_snapshot(&self) -> Self {
+        self.clone()
+    }
 
     pub fn create_player(&mut self, map: &Map) -> Player {
         let id = self.next_id();
@@ -62,18 +64,18 @@ impl GameState {
     }
 
     pub fn render(&self, current_id: Option<u32>, player_pos: (f32, f32)) {
-        let offset_x = screen_width() / 2.0 - player_pos.0 * config::PLAYER_SIZE;
-        let offset_y = screen_height() / 2.0 - player_pos.1 * config::PLAYER_SIZE;
+        let offset_x = screen_width() / 2.0 - player_pos.0 * config::TILE_SIZE;
+        let offset_y = screen_height() / 2.0 - player_pos.1 * config::TILE_SIZE;
 
         for player in self.players.values() {
-            let draw_x = player.x * config::PLAYER_SIZE + offset_x;
-            let draw_y = player.y * config::PLAYER_SIZE + offset_y;
+            let draw_x = player.x * config::TILE_SIZE + offset_x;
+            let draw_y = player.y * config::TILE_SIZE + offset_y;
             let color = if Some(player.id) == current_id {
                 BLUE
             } else {
                 RED
             };
-            draw_circle(draw_x, draw_y, config::PLAYER_SIZE, color);
+            draw_circle(draw_x, draw_y, config::TILE_SIZE, color);
         }
     }
 }
