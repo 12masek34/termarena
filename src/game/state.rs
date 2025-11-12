@@ -38,6 +38,17 @@ impl Player {
     fn default_last_shot() -> Instant {
         Instant::now() - Duration::from_secs(5)
     }
+
+    pub fn hit_by(&mut self, bullet: &Bullet) -> bool {
+        let dx = bullet.x - self.x;
+        let dy = bullet.y - self.y;
+        if (dx * dx + dy * dy).sqrt() < bullet.hit_radius {
+            self.health = self.health.saturating_sub(bullet.damage);
+            true
+        } else {
+            false
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -177,6 +188,7 @@ impl GameState {
 
     pub fn update_bullets(&mut self, map: &Map) {
         let mut to_remove = Vec::new();
+
         for bullet in self.bullets.values_mut() {
             bullet.x += bullet.dx * bullet.speed;
             bullet.y += bullet.dy * bullet.speed;
@@ -184,17 +196,13 @@ impl GameState {
 
             if map.is_wall(bullet.x, bullet.y) || bullet.traveled >= bullet.range {
                 to_remove.push(bullet.id);
+                continue;
             }
 
             for (player_id, player) in self.players.iter_mut() {
-                if bullet.owner_id != *player_id {
-                    let dx = bullet.x - player.x;
-                    let dy = bullet.y - player.y;
-                    if (dx * dx + dy * dy).sqrt() < bullet.hit_radius {
-                        player.health = player.health.saturating_sub(bullet.damage);
-                        to_remove.push(bullet.id);
-                        break;
-                    }
+                if bullet.owner_id != *player_id && player.hit_by(bullet) {
+                    to_remove.push(bullet.id);
+                    break;
                 }
             }
         }
