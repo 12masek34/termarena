@@ -52,11 +52,12 @@ pub fn run_server(port: String) {
 
     loop {
         if let Some((msg, src)) = recv_message::<ClientMessage>(&socket) {
-            let mut clients_guard = clients.lock().unwrap();
-
-            if !clients_guard.contains(&src) {
-                clients_guard.push(src);
-                println!("New client: {}", src);
+            {
+                let mut clients_guard = clients.lock().unwrap();
+                if !clients_guard.contains(&src) {
+                    clients_guard.push(src);
+                    println!("New client: {}", src);
+                }
             }
 
             match msg {
@@ -89,7 +90,10 @@ pub fn run_server(port: String) {
                             game_state_guard.remove(id);
                         }
                     }
-                    clients_guard.retain(|&client| client != src);
+                    {
+                        let mut clients_guard = clients.lock().unwrap();
+                        clients_guard.retain(|&client| client != src);
+                    }
                     let snapshot = game_state.lock().unwrap().get_snapshot();
                     let _ = tx.send(ServerMessage::GameState(snapshot));
                 }
