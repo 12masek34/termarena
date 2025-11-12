@@ -8,8 +8,9 @@ use std::{
 };
 use termarena::client::key_event_handler::{listem_move, listen_quit};
 use termarena::client::state::ClientState;
-use termarena::network::recv_message;
+use termarena::config;
 use termarena::network::state::ServerMessage;
+use termarena::network::{recv_message, start_tcp_map_listener};
 use termarena::network::{send_message, state::ClientMessage};
 
 #[macroquad::main("Client")]
@@ -18,7 +19,7 @@ async fn main() {
     let server_addr_str = args
         .get(1)
         .cloned()
-        .unwrap_or_else(|| String::from("127.0.0.1:8888"));
+        .unwrap_or_else(|| format!("127.0.0.1:{}", config::UDP_PORT));
     let server_addr: SocketAddr = server_addr_str.parse().unwrap();
     let (tx, rx): (Sender<ClientMessage>, Receiver<ClientMessage>) = mpsc::channel();
     let socket = UdpSocket::bind("0.0.0.0:0").expect("Failed to bind client socket");
@@ -32,15 +33,14 @@ async fn main() {
     let socket_clone_recv = socket.try_clone().unwrap();
     socket_clone_recv.set_nonblocking(false).unwrap();
     let client_state_clone = Arc::clone(&client_state);
+    let client_state_clone_map = Arc::clone(&client_state);
+
+    thread::spawn(move || start_tcp_map_listener(client_state_clone_map));
 
     thread::spawn(move || {
         loop {
             if let Some((msg, _addr)) = recv_message::<ServerMessage>(&socket_clone_recv) {
                 match msg {
-                    ServerMessage::Map(map) => {
-                        client_state_clone.lock().unwrap().set_map(map);
-                        println!("Init Map");
-                    }
                     ServerMessage::InitPlayer(player) => {
                         client_state_clone.lock().unwrap().init_player(player);
                         println!("Init player");

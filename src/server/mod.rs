@@ -12,7 +12,7 @@ use crate::{
     game::state::GameState,
     map::Map,
     network::{
-        recv_message, send_message,
+        recv_message, send_map_to_client, send_message,
         state::{ClientMessage, ServerMessage},
     },
 };
@@ -64,9 +64,7 @@ pub fn run_server(port: String) {
                     println!("Player init");
                     let player = game_state.lock().unwrap().create_player(&map);
                     player_id = Some(player.id);
-                    let _ = tx
-                        .send(ServerMessage::Map(map.clone()))
-                        .expect("failed to send to net thread");
+                    send_map_to_client(&map, src);
                     let _ = tx
                         .send(ServerMessage::InitPlayer(player))
                         .expect("failed to send to net thread");

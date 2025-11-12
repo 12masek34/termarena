@@ -1,10 +1,14 @@
 use std::env;
+use termarena::config;
 use termarena::server;
 use termarena::utils;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
-    let port = args.get(1).cloned().unwrap_or_else(|| String::from("8888"));
+    let port = args
+        .get(1)
+        .cloned()
+        .unwrap_or_else(|| config::UDP_PORT.to_string());
 
     let external_ip = utils::get_external_id().unwrap_or_else(|e| {
         eprintln!("Failed to get external IP: {}", e);
