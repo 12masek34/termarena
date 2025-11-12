@@ -1,8 +1,10 @@
-use crate::config::{TILE_SIZE, WALL_PROBABILITY};
-use ::rand::distributions::{Distribution, Uniform};
+use crate::config::TILE_SIZE;
+use ::rand::Rng;
+use ::rand::rngs::ThreadRng;
 use ::rand::thread_rng;
 use macroquad::prelude::*;
 use serde::{Deserialize, Serialize};
+use std::collections::VecDeque;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub enum Tile {
@@ -22,20 +24,24 @@ pub struct Map {
 
 impl Map {
     pub fn new(width: usize, height: usize) -> Self {
-        let mut rng = thread_rng();
-        let uniform = Uniform::from(0.0f32..1.0f32);
-
         let mut tiles = vec![vec![Tile::Empty; width]; height];
+        let mut rng = thread_rng();
 
-        for y in 0..height {
-            for x in 0..width {
-                let roll = uniform.sample(&mut rng);
-                tiles[y][x] = if roll < WALL_PROBABILITY {
-                    Tile::Wall
-                } else {
-                    Tile::Empty
-                };
-            }
+        let area = (width * height) as f32;
+
+        let density = 0.05;
+        let num_shapes = ((area * density).sqrt() as usize).clamp(5, 100);
+
+        let avg_size = ((width.min(height)) as f32 * 0.5) as usize;
+        let max_radius = (width.min(height) / 8).max(3);
+
+        for _ in 0..num_shapes {
+            let cx = rng.gen_range(1..width - 1);
+            let cy = rng.gen_range(1..height - 1);
+
+            let target_size = rng.gen_range(avg_size / 2..avg_size * 2);
+
+            Self::grow_wall_blob(&mut tiles, cx, cy, target_size, max_radius, &mut rng);
         }
 
         Self {
@@ -43,6 +49,82 @@ impl Map {
             height,
             tiles,
             texture: None,
+        }
+    }
+
+    fn grow_wall_blob(
+        tiles: &mut Vec<Vec<Tile>>,
+        cx: usize,
+        cy: usize,
+        target_size: usize,
+        max_radius: usize,
+        rng: &mut ThreadRng,
+    ) {
+        let height = tiles.len();
+        let width = tiles[0].len();
+        let mut queue = VecDeque::new();
+        queue.push_back((cx, cy));
+        let mut count = 0;
+
+        while let Some((x, y)) = queue.pop_front() {
+            if count >= target_size {
+                break;
+            }
+
+            if x >= width || y >= height {
+                continue;
+            }
+
+            if tiles[y][x] == Tile::Wall {
+                continue;
+            }
+
+            tiles[y][x] = Tile::Wall;
+            count += 1;
+
+            let dirs = [
+                (1, 0),
+                (-1, 0),
+                (0, 1),
+                (0, -1),
+                (1, 1),
+                (-1, -1),
+                (1, -1),
+                (-1, 1),
+            ];
+
+            for (dx, dy) in dirs {
+                if rng.gen_bool(0.6) {
+                    let nx = x as isize + dx;
+                    let ny = y as isize + dy;
+
+                    if nx >= 0 && ny >= 0 && nx < width as isize && ny < height as isize {
+                        let dist = ((nx - cx as isize).pow(2) + (ny - cy as isize).pow(2)) as f32;
+                        if dist.sqrt() <= max_radius as f32 {
+                            queue.push_back((nx as usize, ny as usize));
+                        }
+                    }
+                }
+            }
+        }
+
+        for y in 1..height - 1 {
+            for x in 1..width - 1 {
+                if tiles[y][x] == Tile::Wall {
+                    let neighbors = [
+                        &tiles[y - 1][x],
+                        &tiles[y + 1][x],
+                        &tiles[y][x - 1],
+                        &tiles[y][x + 1],
+                    ];
+
+                    let wall_neighbors = neighbors.iter().filter(|&&t| *t == Tile::Wall).count();
+
+                    if wall_neighbors < 2 {
+                        tiles[y][x] = Tile::Empty;
+                    }
+                }
+            }
         }
     }
 
