@@ -25,6 +25,9 @@ async fn main() {
     let socket = UdpSocket::bind("0.0.0.0:0").expect("Failed to bind client socket");
     let client_state = Arc::new(Mutex::new(ClientState::new()));
 
+    let client_state_clone_map = Arc::clone(&client_state);
+    thread::spawn(move || start_tcp_map_listener(client_state_clone_map));
+
     socket
         .set_nonblocking(true)
         .expect("Failed to set nonblocking");
@@ -33,10 +36,6 @@ async fn main() {
     let socket_clone_recv = socket.try_clone().unwrap();
     socket_clone_recv.set_nonblocking(false).unwrap();
     let client_state_clone = Arc::clone(&client_state);
-    let client_state_clone_map = Arc::clone(&client_state);
-
-    thread::spawn(move || start_tcp_map_listener(client_state_clone_map));
-
     thread::spawn(move || {
         loop {
             if let Some((msg, _addr)) = recv_message::<ServerMessage>(&socket_clone_recv) {
