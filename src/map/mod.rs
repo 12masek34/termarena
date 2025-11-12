@@ -82,45 +82,72 @@ impl Map {
     }
 
     pub fn render(&mut self, player_pos: (f32, f32)) {
-        let tile_size = TILE_SIZE;
+        if self.texture.is_none() {
+            self.set_texture()
+        }
+
+        self.render_border();
+        self.render_texture(player_pos);
+    }
+
+    pub fn render_border(&self) {
+        draw_rectangle(
+            0.0,
+            0.0,
+            self.width as f32 * TILE_SIZE,
+            self.height as f32 * TILE_SIZE,
+            BLACK,
+        );
+
+        draw_rectangle_lines(
+            0.0,
+            0.0,
+            self.width as f32 * TILE_SIZE,
+            self.height as f32 * TILE_SIZE,
+            2.0,
+            BLACK,
+        );
+    }
+
+    pub fn set_texture(&mut self) {
+        let mut image = Image::gen_image_color(self.width as u16, self.height as u16, LIGHTGRAY);
+
+        for y in 0..self.height {
+            for x in 0..self.width {
+                let color = match self.tiles[y][x] {
+                    Tile::Empty => LIGHTGRAY,
+                    Tile::Wall => DARKBROWN,
+                };
+                image.set_pixel(x as u32, y as u32, color);
+            }
+        }
+
+        let texture = Texture2D::from_image(&image);
+        texture.set_filter(FilterMode::Nearest);
+        self.texture = Some(texture);
+    }
+
+    pub fn render_texture(&self, player_pos: (f32, f32)) {
         let screen_center_x = screen_width() / 2.0;
         let screen_center_y = screen_height() / 2.0;
 
-        let tiles_in_x = (screen_width() / tile_size).ceil() as usize;
-        let tiles_in_y = (screen_height() / tile_size).ceil() as usize;
+        let tiles_in_x = (screen_width() / TILE_SIZE).ceil() as usize;
+        let tiles_in_y = (screen_height() / TILE_SIZE).ceil() as usize;
 
         let start_x = (player_pos.0 as isize - (tiles_in_x / 2) as isize).max(0) as usize;
         let start_y = (player_pos.1 as isize - (tiles_in_y / 2) as isize).max(0) as usize;
         let end_x = (start_x + tiles_in_x).min(self.width);
         let end_y = (start_y + tiles_in_y).min(self.height);
 
-        let offset_x = screen_center_x - (player_pos.0 - start_x as f32) * tile_size;
-        let offset_y = screen_center_y - (player_pos.1 - start_y as f32) * tile_size;
-
-        if self.texture.is_none() {
-            let mut image = Image::gen_image_color(self.width as u16, self.height as u16, BLACK);
-
-            for y in 0..self.height {
-                for x in 0..self.width {
-                    let color = match self.tiles[y][x] {
-                        Tile::Empty => BLACK,
-                        Tile::Wall => WHITE,
-                    };
-                    image.set_pixel(x as u32, y as u32, color);
-                }
-            }
-
-            let texture = Texture2D::from_image(&image);
-            texture.set_filter(FilterMode::Nearest);
-            self.texture = Some(texture);
-        }
+        let offset_x = screen_center_x - (player_pos.0 - start_x as f32) * TILE_SIZE;
+        let offset_y = screen_center_y - (player_pos.1 - start_y as f32) * TILE_SIZE;
 
         if let Some(texture) = &self.texture {
             draw_texture_ex(
                 texture,
                 offset_x,
                 offset_y,
-                WHITE,
+                LIGHTGRAY,
                 DrawTextureParams {
                     source: Some(Rect {
                         x: start_x as f32,
@@ -129,8 +156,8 @@ impl Map {
                         h: (end_y - start_y) as f32,
                     }),
                     dest_size: Some(vec2(
-                        (end_x - start_x) as f32 * tile_size,
-                        (end_y - start_y) as f32 * tile_size,
+                        (end_x - start_x) as f32 * TILE_SIZE,
+                        (end_y - start_y) as f32 * TILE_SIZE,
                     )),
                     ..Default::default()
                 },
