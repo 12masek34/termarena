@@ -6,9 +6,6 @@ use std::time::Instant;
 
 use crate::config;
 use crate::map::Map;
-use crate::map::Tile;
-use ::rand::Rng;
-use ::rand::thread_rng;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub enum Direction {
@@ -94,15 +91,7 @@ impl GameState {
 
     pub fn create_player(&mut self, map: &Map) -> Player {
         let id = self.next_id();
-        let mut rng = thread_rng();
-        let (x, y) = loop {
-            let x = rng.gen_range(0..map.width);
-            let y = rng.gen_range(0..map.height);
-
-            if map.tiles[y][x] == Tile::Empty {
-                break (x as f32, y as f32);
-            }
-        };
+        let (x, y) = map.generate_spawn_position();
         let player = Player {
             id,
             x,
@@ -188,6 +177,7 @@ impl GameState {
 
     pub fn update_bullets(&mut self, map: &Map) {
         let mut to_remove = Vec::new();
+        let mut to_respawn = Vec::new();
 
         for bullet in self.bullets.values_mut() {
             bullet.x += bullet.dx * bullet.speed;
@@ -202,6 +192,11 @@ impl GameState {
             for (player_id, player) in self.players.iter_mut() {
                 if bullet.owner_id != *player_id && player.hit_by(bullet) {
                     to_remove.push(bullet.id);
+
+                    if player.health == 0 {
+                        to_respawn.push(*player_id);
+                    }
+
                     break;
                 }
             }
@@ -209,6 +204,21 @@ impl GameState {
 
         for id in to_remove {
             self.bullets.remove(&id);
+        }
+
+        for player_id in to_respawn {
+            self.respawn(player_id, map);
+        }
+    }
+
+    pub fn respawn(&mut self, player_id: u32, map: &Map) {
+        if let Some(player) = self.players.get_mut(&player_id) {
+            let (x, y) = map.generate_spawn_position();
+            player.x = x;
+            player.y = y;
+            player.health = 3;
+            player.direction = Direction::Up;
+            player.last_shot = Instant::now() - Duration::from_secs(5);
         }
     }
 

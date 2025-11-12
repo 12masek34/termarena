@@ -52,6 +52,17 @@ impl Map {
         }
     }
 
+    pub fn generate_spawn_position(&self) -> (f32, f32) {
+        let mut rng = thread_rng();
+        loop {
+            let x = rng.gen_range(0..self.width);
+            let y = rng.gen_range(0..self.height);
+            if self.tiles[y][x] == Tile::Empty {
+                return (x as f32, y as f32);
+            }
+        }
+    }
+
     fn grow_wall_blob(
         tiles: &mut Vec<Vec<Tile>>,
         cx: usize,
