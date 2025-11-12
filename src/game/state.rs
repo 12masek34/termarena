@@ -28,6 +28,7 @@ pub struct Player {
     pub bullet_range: f32,
     pub bullet_damage: u32,
     pub health: u32,
+    pub max_health: u32,
     pub hit_radius: f32,
 }
 
@@ -103,6 +104,7 @@ impl GameState {
             bullet_range: 15.0,
             bullet_damage: 1,
             health: config::PLAYER_HEALTH,
+            max_health: config::PLAYER_HEALTH,
             hit_radius: 0.5,
         };
         self.players.insert(id, player.clone());
@@ -232,9 +234,29 @@ impl GameState {
             let color = if Some(player.id) == current_id {
                 BLUE
             } else {
-                RED
+                DARKBLUE
             };
             draw_circle(draw_x, draw_y, config::TILE_SIZE, color);
+
+            let bar_width = config::TILE_SIZE * 2.0;
+            let bar_height = 4.0;
+            let health_ratio = player.health as f32 / player.max_health as f32;
+
+            draw_rectangle(
+                draw_x - bar_width / 2.0,
+                draw_y + config::TILE_SIZE / 1.0,
+                bar_width,
+                bar_height,
+                RED,
+            );
+
+            draw_rectangle(
+                draw_x - bar_width / 2.0,
+                draw_y + config::TILE_SIZE / 1.0,
+                bar_width * health_ratio,
+                bar_height,
+                GREEN,
+            );
         }
 
         for bullet in self.bullets.values() {
