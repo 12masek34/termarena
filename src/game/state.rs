@@ -82,8 +82,10 @@ impl GameState {
         self.players.keys().max().map(|id| id + 1).unwrap_or(1)
     }
 
-    pub fn remove(&mut self, id: u32) {
-        self.players.remove(&id);
+    pub fn remove(&mut self, player_id: Option<&u32>) {
+        if let Some(id) = player_id {
+            self.players.remove(&id);
+        }
     }
 
     pub fn get_snapshot(&self) -> Self {
@@ -112,7 +114,7 @@ impl GameState {
         player
     }
 
-    pub fn move_player(&mut self, player_id: Option<u32>, x: f32, y: f32, map: &Map) {
+    pub fn move_player(&mut self, player_id: Option<&u32>, x: f32, y: f32, map: &Map) {
         if let Some(id) = player_id {
             if let Some(player) = self.players.get_mut(&id) {
                 if x > 0.0 {
@@ -135,7 +137,7 @@ impl GameState {
         }
     }
 
-    pub fn shoot(&mut self, player_id: Option<u32>) {
+    pub fn shoot(&mut self, player_id: Option<&u32>) {
         if let Some(id) = player_id {
             let next_bullet_id = self.next_bullet_id();
             if let Some(player) = self.players.get_mut(&id) {
@@ -156,7 +158,7 @@ impl GameState {
 
                 let bullet = Bullet {
                     id: next_bullet_id,
-                    owner_id: id,
+                    owner_id: *id,
                     x: player.x,
                     y: player.y,
                     dx,
