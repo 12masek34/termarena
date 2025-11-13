@@ -363,7 +363,25 @@ impl GameState {
         let offset_y = screen_height() / 2.0 - player_pos.1 * config::TILE_SIZE;
 
         for player in self.players.values() {
-            player.render(current_id, offset_x, offset_y);
+            if Some(player.id) == current_id {
+                player.render(current_id, offset_x, offset_y);
+                continue;
+            }
+
+            let dx = player.x - player_pos.0;
+            let dy = player.y - player_pos.1;
+            let screen_x = screen_width() / 2.0 + dx * config::TILE_SIZE;
+            let screen_y = screen_height() / 2.0 + dy * config::TILE_SIZE;
+
+            if screen_x < 0.0
+                || screen_x > screen_width()
+                || screen_y < 0.0
+                || screen_y > screen_height()
+            {
+                self.draw_offscreen_arrow(dx, dy);
+            } else {
+                player.render(current_id, offset_x, offset_y);
+            }
         }
 
         for bullet in self.bullets.values() {
@@ -371,6 +389,34 @@ impl GameState {
         }
 
         self.render_hud(current_id);
+    }
+
+    pub fn draw_offscreen_arrow(&self, dx: f32, dy: f32) {
+        let angle = dy.atan2(dx);
+        let margin = 20.0;
+        let half_w = screen_width() / 2.0 - margin;
+        let half_h = screen_height() / 2.0 - margin;
+
+        let mut arrow_x = screen_width() / 2.0 + half_w * angle.cos();
+        let mut arrow_y = screen_height() / 2.0 + half_h * angle.sin();
+
+        arrow_x = arrow_x.clamp(margin, screen_width() - margin);
+        arrow_y = arrow_y.clamp(margin, screen_height() - margin);
+
+        let arrow_size = 10.0;
+        let angle_offset = std::f32::consts::PI / 6.0;
+
+        let tip = Vec2::new(arrow_x, arrow_y);
+        let left = Vec2::new(
+            arrow_x - arrow_size * (angle - angle_offset).cos(),
+            arrow_y - arrow_size * (angle - angle_offset).sin(),
+        );
+        let right = Vec2::new(
+            arrow_x - arrow_size * (angle + angle_offset).cos(),
+            arrow_y - arrow_size * (angle + angle_offset).sin(),
+        );
+
+        draw_triangle(tip, left, right, RED);
     }
 
     pub fn render_hud(&self, current_id: Option<u32>) {
