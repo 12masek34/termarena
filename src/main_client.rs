@@ -6,7 +6,7 @@ use std::{
     sync::{Arc, Mutex},
     thread,
 };
-use termarena::client::key_event_handler::{listem_move, listen_quit, listen_shoot};
+use termarena::client::key_event_handler::{listen_move, listen_quit, listen_shoot};
 use termarena::client::state::ClientState;
 use termarena::config;
 use termarena::network::state::ServerMessage;
@@ -62,9 +62,9 @@ async fn main() {
     loop {
         clear_background(BLACK);
 
-        let (x, y) = listem_move();
-        if let (Some(x), Some(y)) = (x, y) {
-            let _ = tx.send(ClientMessage::Move { x, y });
+        let direction = listen_move();
+        if let Some(direction) = direction {
+            let _ = tx.send(ClientMessage::Move(direction));
         }
 
         if listen_shoot() {

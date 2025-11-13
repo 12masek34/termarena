@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::game::state::{GameState, Player};
+use crate::game::state::{Direction, GameState, Player};
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub enum ServerMessage {
@@ -12,6 +12,6 @@ pub enum ServerMessage {
 pub enum ClientMessage {
     Init,
     Quit,
-    Move { x: f32, y: f32 },
+    Move(Direction),
     Shoot,
 }

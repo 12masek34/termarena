@@ -1,47 +1,23 @@
 use macroquad::prelude::*;
 
-pub fn listem_move() -> (Option<f32>, Option<f32>) {
-    let mut moved = false;
-    let mut dx: f32 = 0.0;
-    let mut dy: f32 = 0.0;
+use crate::game::state::Direction;
 
-    if is_key_down(KeyCode::W) || is_key_down(KeyCode::Up) {
-        dy -= 1.0;
-        moved = true;
-    }
-    if is_key_down(KeyCode::S) || is_key_down(KeyCode::Down) {
-        dy += 1.0;
-        moved = true;
-    }
-    if is_key_down(KeyCode::A) || is_key_down(KeyCode::Left) {
-        dx -= 1.0;
-        moved = true;
-    }
-    if is_key_down(KeyCode::D) || is_key_down(KeyCode::Right) {
-        dx += 1.0;
-        moved = true;
-    }
-    if is_key_down(KeyCode::H) {
-        dx -= 1.0;
-        moved = true;
-    }
-    if is_key_down(KeyCode::J) {
-        dy += 1.0;
-        moved = true;
-    }
-    if is_key_down(KeyCode::K) {
-        dy -= 1.0;
-        moved = true;
-    }
-    if is_key_down(KeyCode::L) {
-        dx += 1.0;
-        moved = true;
-    }
+pub fn listen_move() -> Option<Direction> {
+    let up = is_key_down(KeyCode::W) || is_key_down(KeyCode::Up) || is_key_down(KeyCode::K);
+    let down = is_key_down(KeyCode::S) || is_key_down(KeyCode::Down) || is_key_down(KeyCode::J);
+    let left = is_key_down(KeyCode::A) || is_key_down(KeyCode::Left) || is_key_down(KeyCode::H);
+    let right = is_key_down(KeyCode::D) || is_key_down(KeyCode::Right) || is_key_down(KeyCode::L);
 
-    if moved {
-        (Some(dx), Some(dy))
+    if up {
+        Some(Direction::Up)
+    } else if down {
+        Some(Direction::Down)
+    } else if left {
+        Some(Direction::Left)
+    } else if right {
+        Some(Direction::Right)
     } else {
-        (None, None)
+        None
     }
 }
 

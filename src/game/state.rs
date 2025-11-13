@@ -30,6 +30,9 @@ pub struct Player {
     pub health: u32,
     pub max_health: u32,
     pub hit_radius: f32,
+    pub is_moving: bool,
+    pub move_target: Option<(f32, f32)>,
+    pub walk_speed: f32,
 }
 
 impl Player {
@@ -108,30 +111,37 @@ impl GameState {
             health: config::PLAYER_HEALTH,
             max_health: config::PLAYER_HEALTH,
             hit_radius: 0.5,
+            is_moving: false,
+            move_target: None,
+            walk_speed: config::WALK_SPEED,
         };
         self.players.insert(id, player.clone());
 
         player
     }
 
-    pub fn move_player(&mut self, player_id: Option<&u32>, x: f32, y: f32, map: &Map) {
+    pub fn move_player(&mut self, player_id: Option<&u32>, dir: Direction, map: &Map) {
         if let Some(id) = player_id {
-            if let Some(player) = self.players.get_mut(&id) {
-                if x > 0.0 {
-                    player.direction = Direction::Right;
-                } else if x < 0.0 {
-                    player.direction = Direction::Left;
-                } else if y > 0.0 {
-                    player.direction = Direction::Down;
-                } else if y < 0.0 {
-                    player.direction = Direction::Up;
+            if let Some(player) = self.players.get_mut(id) {
+                if player.is_moving {
+                    return;
                 }
-                let new_x = player.x + x * config::PLAYER_SPEED;
-                let new_y = player.y + y * config::PLAYER_SPEED;
+
+                player.direction = dir;
+
+                let (dx, dy) = match player.direction {
+                    Direction::Up => (0.0, -config::STEP),
+                    Direction::Down => (0.0, config::STEP),
+                    Direction::Left => (-config::STEP, 0.0),
+                    Direction::Right => (config::STEP, 0.0),
+                };
+
+                let new_x = player.x + dx * 0.5;
+                let new_y = player.y + dy * 0.5;
 
                 if !map.is_wall(new_x, new_y) {
-                    player.x = new_x;
-                    player.y = new_y;
+                    player.move_target = Some((new_x, new_y));
+                    player.is_moving = true;
                 }
             }
         }
@@ -150,10 +160,10 @@ impl GameState {
                 player.last_shot = Instant::now();
 
                 let (dx, dy) = match player.direction {
-                    Direction::Up => (0.0, -1.0),
-                    Direction::Down => (0.0, 1.0),
-                    Direction::Left => (-1.0, 0.0),
-                    Direction::Right => (1.0, 0.0),
+                    Direction::Up => (0.0, -config::STEP),
+                    Direction::Down => (0.0, config::STEP),
+                    Direction::Left => (-config::STEP, 0.0),
+                    Direction::Right => (config::STEP, 0.0),
                 };
 
                 let bullet = Bullet {
@@ -213,6 +223,37 @@ impl GameState {
         for player_id in to_respawn {
             self.respawn(player_id, map);
         }
+    }
+
+    pub fn update_players(&mut self, map: &Map) {
+        for player in self.players.values_mut() {
+            if player.is_moving {
+                let (tx, ty) = player.move_target.unwrap();
+                let dx = tx - player.x;
+                let dy = ty - player.y;
+                let dist = (dx * dx + dy * dy).sqrt();
+
+                if dist <= player.walk_speed {
+                    player.x = tx;
+                    player.y = ty;
+                    player.is_moving = false;
+                    player.move_target = None;
+                } else {
+                    player.x += player.walk_speed * dx / dist;
+                    player.y += player.walk_speed * dy / dist;
+                }
+
+                if map.is_wall(player.x, player.y) {
+                    player.is_moving = false;
+                    player.move_target = None;
+                }
+            }
+        }
+    }
+
+    pub fn update(&mut self, map: &Map) {
+        self.update_bullets(map);
+        self.update_players(map);
     }
 
     pub fn respawn(&mut self, player_id: u32, map: &Map) {

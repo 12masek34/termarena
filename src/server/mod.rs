@@ -56,7 +56,7 @@ pub fn run_server(port: String) {
         let tick_rate = Duration::from_millis(50);
         loop {
             let start = Instant::now();
-            game_state_clone.lock().unwrap().update_bullets(&map_clone);
+            game_state_clone.lock().unwrap().update(&map_clone);
             let snapshot = game_state_clone.lock().unwrap().get_snapshot();
             let _ = tx_clone.send(ServerMessage::GameState(snapshot));
             let elapsed = start.elapsed();
@@ -91,12 +91,12 @@ pub fn run_server(port: String) {
                         .send(ServerMessage::InitPlayer(player))
                         .expect("failed to send to net thread");
                 }
-                ClientMessage::Move { x, y } => {
+                ClientMessage::Move(direction) => {
                     {
                         let clients_lock = clients.lock().unwrap();
                         let player_id = clients_lock.get(&src);
                         let mut game_state_lock = game_state.lock().unwrap();
-                        game_state_lock.move_player(player_id, x, y, &map);
+                        game_state_lock.move_player(player_id, direction, &map);
                     }
                     let snapshot = {
                         let game_state = game_state.lock().unwrap();
