@@ -43,7 +43,7 @@ async fn main() {
     send_message(&socket, &ClientMessage::Init, server_addr);
 
     let socket_clone_recv = socket.try_clone().unwrap();
-    socket_clone_recv.set_nonblocking(false).unwrap();
+    socket_clone_recv.set_nonblocking(false).expect("Failed to set blocking mode");
     let client_state_clone = Arc::clone(&client_state);
     thread::spawn(move || {
         loop {
