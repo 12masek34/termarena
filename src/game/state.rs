@@ -97,18 +97,20 @@ impl Player {
         let bar_width = config::TILE_SIZE * 2.0;
         let bar_height = 4.0;
         let health_ratio = self.health as f32 / self.max_health as f32;
+        let bar_width_coef = 2.0;
+        let draw_y_coef = 0.6;
 
         draw_rectangle(
-            draw_x - bar_width / 2.0,
-            draw_y + config::TILE_SIZE / 0.6,
+            draw_x - bar_width / bar_width_coef,
+            draw_y + config::TILE_SIZE / draw_y_coef,
             bar_width,
             bar_height,
             RED,
         );
 
         draw_rectangle(
-            draw_x - bar_width / 2.0,
-            draw_y + config::TILE_SIZE / 0.6,
+            draw_x - bar_width / bar_width_coef,
+            draw_y + config::TILE_SIZE / draw_y_coef,
             bar_width * health_ratio,
             bar_height,
             GREEN,
