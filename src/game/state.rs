@@ -395,8 +395,14 @@ impl GameState {
             };
             draw_text(
                 &format!(
-                    "ID: {} {} | Kills: {} | Deths: {}",
-                    player.id, current_marker, player.kills, player.deths
+                    "ID: {} {} | Kills: {} | Deths: {} | Damage: {} | Health {}/{}",
+                    player.id,
+                    current_marker,
+                    player.kills,
+                    player.deths,
+                    player.bullet_damage,
+                    player.health,
+                    player.max_health
                 ),
                 10.0,
                 y,

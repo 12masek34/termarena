@@ -54,11 +54,9 @@ async fn main() {
                 match msg {
                     ServerMessage::InitPlayer(player) => {
                         clinet_state_clone_lock.init_player(player);
-                        println!("InitPlayer");
                     }
                     ServerMessage::GameState(state) => {
                         clinet_state_clone_lock.update_state(state);
-                        println!("GameState");
                     }
                 }
             }
