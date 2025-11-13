@@ -54,6 +54,38 @@ impl Player {
             false
         }
     }
+
+    pub fn render(&self, current_id: Option<u32>, offset_x: f32, offset_y: f32) {
+        let draw_x = self.x * config::TILE_SIZE + offset_x;
+        let draw_y = self.y * config::TILE_SIZE + offset_y;
+
+        let color = if Some(self.id) == current_id {
+            BLUE
+        } else {
+            DARKBLUE
+        };
+        draw_circle(draw_x, draw_y, self.radius * config::TILE_SIZE, color);
+
+        let bar_width = config::TILE_SIZE * 2.0;
+        let bar_height = 4.0;
+        let health_ratio = self.health as f32 / self.max_health as f32;
+
+        draw_rectangle(
+            draw_x - bar_width / 2.0,
+            draw_y + config::TILE_SIZE / 1.0,
+            bar_width,
+            bar_height,
+            RED,
+        );
+
+        draw_rectangle(
+            draw_x - bar_width / 2.0,
+            draw_y + config::TILE_SIZE / 1.0,
+            bar_width * health_ratio,
+            bar_height,
+            GREEN,
+        );
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -69,6 +101,19 @@ pub struct Bullet {
     pub traveled: f32,
     pub damage: u32,
     pub hit_radius: f32,
+}
+
+impl Bullet {
+    fn render(&self, offset_x: f32, offset_y: f32) {
+        let draw_x = self.x * config::TILE_SIZE + offset_x;
+        let draw_y = self.y * config::TILE_SIZE + offset_y;
+        draw_circle(
+            draw_x,
+            draw_y,
+            self.hit_radius * config::TILE_SIZE,
+            DARKPURPLE,
+        );
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -277,45 +322,11 @@ impl GameState {
         let offset_y = screen_height() / 2.0 - player_pos.1 * config::TILE_SIZE;
 
         for player in self.players.values() {
-            let draw_x = player.x * config::TILE_SIZE + offset_x;
-            let draw_y = player.y * config::TILE_SIZE + offset_y;
-            let color = if Some(player.id) == current_id {
-                BLUE
-            } else {
-                DARKBLUE
-            };
-            draw_circle(draw_x, draw_y, player.radius * config::TILE_SIZE, color);
-
-            let bar_width = config::TILE_SIZE * 2.0;
-            let bar_height = 4.0;
-            let health_ratio = player.health as f32 / player.max_health as f32;
-
-            draw_rectangle(
-                draw_x - bar_width / 2.0,
-                draw_y + config::TILE_SIZE / 1.0,
-                bar_width,
-                bar_height,
-                RED,
-            );
-
-            draw_rectangle(
-                draw_x - bar_width / 2.0,
-                draw_y + config::TILE_SIZE / 1.0,
-                bar_width * health_ratio,
-                bar_height,
-                GREEN,
-            );
+            player.render(current_id, offset_x, offset_y);
         }
 
         for bullet in self.bullets.values() {
-            let draw_x = bullet.x * config::TILE_SIZE + offset_x;
-            let draw_y = bullet.y * config::TILE_SIZE + offset_y;
-            draw_circle(
-                draw_x,
-                draw_y,
-                bullet.hit_radius * config::TILE_SIZE,
-                DARKPURPLE,
-            );
+            bullet.render(offset_x, offset_y);
         }
     }
 }

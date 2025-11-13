@@ -20,6 +20,7 @@ async fn main() {
         .get(1)
         .cloned()
         .unwrap_or_else(|| format!("127.0.0.1:{}", config::UDP_PORT));
+    let server_addr_str = String::from("10.2.106.191:8888");
     let server_addr: SocketAddr = server_addr_str.parse().unwrap();
     let (tx, rx): (Sender<ClientMessage>, Receiver<ClientMessage>) = mpsc::channel();
     let socket = UdpSocket::bind("0.0.0.0:0").expect("Failed to bind client socket");
