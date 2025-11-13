@@ -118,6 +118,14 @@ impl Player {
             bar_height,
             GREEN,
         );
+
+        let text = format!("{}", self.id);
+        let font_size = (self.radius * config::TILE_SIZE) as f32;
+        let text_dimensions = measure_text(&text, None, font_size as u16, 1.0);
+        let text_x = draw_x - text_dimensions.width / 2.0;
+        let text_y = draw_y + text_dimensions.height / 2.0;
+
+        draw_text(&text, text_x, text_y, font_size, SKYBLUE);
     }
 }
 
