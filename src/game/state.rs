@@ -358,5 +358,38 @@ impl GameState {
         for bullet in self.bullets.values() {
             bullet.render(offset_x, offset_y);
         }
+
+        self.render_hud(current_id);
+    }
+
+    pub fn render_hud(&self, current_id: Option<u32>) {
+        let mut players: Vec<_> = self.players.values().collect();
+        players.sort_by_key(|p| p.id);
+
+        let mut y = 10.0;
+        draw_text(
+            &format!("Players online: {}", players.len()),
+            10.0,
+            y,
+            20.0,
+            WHITE,
+        );
+        y += 25.0;
+
+        for player in players {
+            let current_marker = if Some(player.id) == current_id {
+                "(You)"
+            } else {
+                ""
+            };
+            draw_text(
+                &format!("ID: {} {}", player.id, current_marker),
+                10.0,
+                y,
+                20.0,
+                WHITE,
+            );
+            y += 25.0;
+        }
     }
 }
