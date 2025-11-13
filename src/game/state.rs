@@ -20,6 +20,7 @@ pub struct Player {
     pub id: u32,
     pub x: f32,
     pub y: f32,
+    pub radius: f32,
     pub direction: Direction,
     #[serde(skip, default = "Player::default_last_shot")]
     pub last_shot: Instant,
@@ -43,7 +44,10 @@ impl Player {
     pub fn hit_by(&mut self, bullet: &Bullet) -> bool {
         let dx = bullet.x - self.x;
         let dy = bullet.y - self.y;
-        if (dx * dx + dy * dy).sqrt() < bullet.hit_radius {
+        let distance_sq = dx * dx + dy * dy;
+        let hit_distance = self.radius + bullet.hit_radius;
+
+        if distance_sq < hit_distance * hit_distance {
             self.health = self.health.saturating_sub(bullet.damage);
             true
         } else {
@@ -102,6 +106,7 @@ impl GameState {
             id,
             x,
             y,
+            radius: config::PLAYER_RADIUS,
             direction: Direction::Up,
             last_shot: Instant::now() - Duration::from_secs(5),
             fire_rate: 1000,
@@ -110,7 +115,7 @@ impl GameState {
             bullet_damage: 1,
             health: config::PLAYER_HEALTH,
             max_health: config::PLAYER_HEALTH,
-            hit_radius: 0.5,
+            hit_radius: config::HIT_RADIUS,
             is_moving: false,
             move_target: None,
             walk_speed: config::WALK_SPEED,
@@ -279,7 +284,7 @@ impl GameState {
             } else {
                 DARKBLUE
             };
-            draw_circle(draw_x, draw_y, config::TILE_SIZE, color);
+            draw_circle(draw_x, draw_y, player.radius * config::TILE_SIZE, color);
 
             let bar_width = config::TILE_SIZE * 2.0;
             let bar_height = 4.0;
@@ -305,7 +310,12 @@ impl GameState {
         for bullet in self.bullets.values() {
             let draw_x = bullet.x * config::TILE_SIZE + offset_x;
             let draw_y = bullet.y * config::TILE_SIZE + offset_y;
-            draw_circle(draw_x, draw_y, config::TILE_SIZE / 4.0, DARKPURPLE);
+            draw_circle(
+                draw_x,
+                draw_y,
+                bullet.hit_radius * config::TILE_SIZE,
+                DARKPURPLE,
+            );
         }
     }
 }
