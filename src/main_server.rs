@@ -10,20 +10,11 @@ fn main() {
         .cloned()
         .unwrap_or_else(|| config::UDP_PORT.to_string());
 
-    let external_ip = utils::get_external_id().unwrap_or_else(|e| {
-        eprintln!("Failed to get external IP: {}", e);
-        "unknown".to_string()
-    });
-
     let local_ip = utils::get_local_ip().unwrap_or("unknown".to_string());
 
-    let external_with_port = format!("{}:{}", external_ip, port);
     let local_with_port = format!("{}:{}", local_ip, port);
 
-    println!(
-        "External IP: {}, Local IP: {}",
-        external_with_port, local_with_port
-    );
+    println!("Local IP: {}", local_with_port);
 
     server::run_server(port);
 }
