@@ -48,13 +48,15 @@ async fn main() {
     thread::spawn(move || {
         loop {
             if let Some((msg, _addr)) = recv_message::<ServerMessage>(&socket_clone_recv) {
+                let mut clinet_state_clone_lock = client_state_clone.lock().unwrap();
                 match msg {
                     ServerMessage::InitPlayer(player) => {
-                        client_state_clone.lock().unwrap().init_player(player);
-                        println!("Init player");
+                        clinet_state_clone_lock.init_player(player);
+                        println!("InitPlayer");
                     }
                     ServerMessage::GameState(state) => {
-                        client_state_clone.lock().unwrap().update_state(state);
+                        clinet_state_clone_lock.update_state(state);
+                        println!("GameState");
                     }
                 }
             }
