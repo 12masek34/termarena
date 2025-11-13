@@ -9,6 +9,7 @@ use std::{
 use termarena::client::key_event_handler::{listen_move, listen_quit, listen_shoot};
 use termarena::client::state::ClientState;
 use termarena::config;
+use termarena::map::Map;
 use termarena::network::state::ServerMessage;
 use termarena::network::{get_map_from_tcp, recv_message};
 use termarena::network::{send_message, state::ClientMessage};
@@ -25,12 +26,14 @@ async fn main() {
     let (tx, rx): (Sender<ClientMessage>, Receiver<ClientMessage>) = mpsc::channel();
     let socket = UdpSocket::bind("0.0.0.0:0").expect("Failed to bind client socket");
     let client_state = Arc::new(Mutex::new(ClientState::new()));
+    let map = Arc::new(Mutex::new(None::<Map>));
 
-    let client_state_clone_map = Arc::clone(&client_state);
+    let map_clone = Arc::clone(&map);
     thread::spawn(move || {
-        let map = get_map_from_tcp();
-        if let Some(map) = map {
-            client_state_clone_map.lock().unwrap().set_map(map);
+        if let Some(new_map) = get_map_from_tcp() {
+            *map_clone.lock().unwrap() = Some(new_map);
+        } else {
+            eprintln!("Error received map");
         }
     });
 
@@ -82,7 +85,7 @@ async fn main() {
             break;
         }
 
-        let (gs_arc, map_arc, current_id, player_pos) = {
+        let (gs_arc, current_id, player_pos) = {
             let locked_client = client_state.lock().unwrap();
             let player = match locked_client.get_current_player() {
                 Some(p) => p.clone(),
@@ -98,17 +101,10 @@ async fn main() {
                     continue;
                 }
             };
-            let map_arc = match &locked_client.map {
-                Some(map) => Arc::clone(map),
-                None => {
-                    next_frame().await;
-                    continue;
-                }
-            };
-            (gs_arc, map_arc, locked_client.id, (player.x, player.y))
+            (gs_arc, locked_client.id, (player.x, player.y))
         };
 
-        map_arc.lock().unwrap().render(player_pos);
+        map.lock().unwrap().as_mut().map(|m| m.render(player_pos));
         gs_arc.render(current_id, player_pos);
 
         next_frame().await;
