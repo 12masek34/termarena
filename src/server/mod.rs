@@ -56,8 +56,11 @@ pub fn run_server(port: String) {
         let tick_rate = Duration::from_millis(50);
         loop {
             let start = Instant::now();
-            game_state_clone.lock().unwrap().update(&map_clone);
-            let snapshot = game_state_clone.lock().unwrap().get_snapshot();
+            let snapshot = {
+                let mut game_state_lock = game_state_clone.lock().unwrap();
+                game_state_lock.update(&map_clone);
+                game_state_lock.get_snapshot()
+            };
             let _ = tx_clone.send(ServerMessage::GameState(snapshot));
             let elapsed = start.elapsed();
 
