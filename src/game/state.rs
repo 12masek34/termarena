@@ -66,13 +66,41 @@ impl Player {
         };
         draw_circle(draw_x, draw_y, self.radius * config::TILE_SIZE, color);
 
+        let tip_length = self.radius * config::TILE_SIZE * 1.5;
+        let tip_width = self.radius * config::TILE_SIZE * 2.0;
+
+        let (tip, left, right) = match self.direction {
+            Direction::Up => (
+                vec2(draw_x, draw_y - tip_length),
+                vec2(draw_x - tip_width / 2.0, draw_y),
+                vec2(draw_x + tip_width / 2.0, draw_y),
+            ),
+            Direction::Down => (
+                vec2(draw_x, draw_y + tip_length),
+                vec2(draw_x - tip_width / 2.0, draw_y),
+                vec2(draw_x + tip_width / 2.0, draw_y),
+            ),
+            Direction::Left => (
+                vec2(draw_x - tip_length, draw_y),
+                vec2(draw_x, draw_y - tip_width / 2.0),
+                vec2(draw_x, draw_y + tip_width / 2.0),
+            ),
+            Direction::Right => (
+                vec2(draw_x + tip_length, draw_y),
+                vec2(draw_x, draw_y - tip_width / 2.0),
+                vec2(draw_x, draw_y + tip_width / 2.0),
+            ),
+        };
+
+        draw_triangle(tip, left, right, color);
+
         let bar_width = config::TILE_SIZE * 2.0;
         let bar_height = 4.0;
         let health_ratio = self.health as f32 / self.max_health as f32;
 
         draw_rectangle(
             draw_x - bar_width / 2.0,
-            draw_y + config::TILE_SIZE / 1.0,
+            draw_y + config::TILE_SIZE / 0.6,
             bar_width,
             bar_height,
             RED,
@@ -80,7 +108,7 @@ impl Player {
 
         draw_rectangle(
             draw_x - bar_width / 2.0,
-            draw_y + config::TILE_SIZE / 1.0,
+            draw_y + config::TILE_SIZE / 0.6,
             bar_width * health_ratio,
             bar_height,
             GREEN,
