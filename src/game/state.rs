@@ -24,7 +24,7 @@ pub struct Player {
     pub deths: u32,
     pub radius: f32,
     pub direction: Direction,
-    pub fire_rate: u32,
+    pub fire_rate: f32,
     pub bullet_speed: f32,
     pub bullet_range: f32,
     pub bullet_damage: u32,
@@ -189,10 +189,10 @@ impl GameState {
             radius: config::PLAYER_RADIUS,
             direction: Direction::Up,
             last_shot: Instant::now() - Duration::from_secs(5),
-            fire_rate: 1000,
+            fire_rate: config::FIRE_RATE,
             bullet_speed: config::BULLET_SPEED,
             bullet_range: config::BULLET_RANGE,
-            bullet_damage: 1,
+            bullet_damage: config::BULLET_DAMAGE,
             health: config::PLAYER_HEALTH,
             max_health: config::PLAYER_HEALTH,
             hit_radius: config::HIT_RADIUS,
@@ -236,7 +236,7 @@ impl GameState {
         if let Some(id) = player_id {
             let next_bullet_id = self.next_bullet_id();
             if let Some(player) = self.players.get_mut(&id) {
-                let fire_rate = Duration::from_millis(player.fire_rate as u64);
+                let fire_rate = Duration::from_secs(player.fire_rate as u64);
 
                 if player.last_shot.elapsed() < fire_rate {
                     return;
@@ -391,18 +391,20 @@ impl GameState {
             let current_marker = if Some(player.id) == current_id {
                 "(You)"
             } else {
-                ""
+                "     "
             };
             draw_text(
                 &format!(
-                    "ID: {} {} | Kills: {} | Deths: {} | Damage: {} | Health {}/{}",
+                    "ID: {}{} | Kills: {} | Deths: {} | Health {}/{} | speed {} | Damage: {}| fire rate {}",
                     player.id,
                     current_marker,
                     player.kills,
                     player.deths,
-                    player.bullet_damage,
                     player.health,
-                    player.max_health
+                    player.max_health,
+                    player.walk_speed,
+                    player.bullet_damage,
+                    player.fire_rate,
                 ),
                 10.0,
                 y,
