@@ -20,10 +20,10 @@ pub struct Player {
     pub id: u32,
     pub x: f32,
     pub y: f32,
+    pub kills: u32,
+    pub deths: u32,
     pub radius: f32,
     pub direction: Direction,
-    #[serde(skip, default = "Player::default_last_shot")]
-    pub last_shot: Instant,
     pub fire_rate: u32,
     pub bullet_speed: f32,
     pub bullet_range: f32,
@@ -34,6 +34,9 @@ pub struct Player {
     pub is_moving: bool,
     pub move_target: Option<(f32, f32)>,
     pub walk_speed: f32,
+
+    #[serde(skip, default = "Player::default_last_shot")]
+    pub last_shot: Instant,
 }
 
 impl Player {
@@ -181,6 +184,8 @@ impl GameState {
             id,
             x,
             y,
+            kills: 0,
+            deths: 0,
             radius: config::PLAYER_RADIUS,
             direction: Direction::Up,
             last_shot: Instant::now() - Duration::from_secs(5),
@@ -289,6 +294,11 @@ impl GameState {
 
                     if player.health == 0 {
                         to_respawn.push(*player_id);
+                        let bullet_owner = self.players.get_mut(&bullet.owner_id);
+
+                        if let Some(owner) = bullet_owner {
+                            owner.kills += 1;
+                        }
                     }
 
                     break;
@@ -344,6 +354,7 @@ impl GameState {
             player.health = config::PLAYER_HEALTH;
             player.direction = Direction::Up;
             player.last_shot = Instant::now() - Duration::from_secs(5);
+            player.deths += 1;
         }
     }
 
@@ -383,7 +394,10 @@ impl GameState {
                 ""
             };
             draw_text(
-                &format!("ID: {} {}", player.id, current_marker),
+                &format!(
+                    "ID: {} {} | Kills: {} | Deths: {}",
+                    player.id, current_marker, player.kills, player.deths
+                ),
                 10.0,
                 y,
                 20.0,
