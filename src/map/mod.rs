@@ -52,13 +52,33 @@ impl Map {
         }
     }
 
-    pub fn generate_spawn_position(&self) -> (f32, f32) {
+    pub fn generate_spawn_position(&self, radius: f32) -> (f32, f32) {
         let mut rng = thread_rng();
         loop {
-            let x = rng.gen_range(0..self.width);
-            let y = rng.gen_range(0..self.height);
-            if self.tiles[y][x] == Tile::Empty {
-                return (x as f32, y as f32);
+            let x = rng.gen_range(0..self.width) as f32;
+            let y = rng.gen_range(0..self.height) as f32;
+
+            let mut can_spawn = true;
+
+            let min_x = (x - radius).floor().max(0.0) as usize;
+            let max_x = (x + radius).ceil().min(self.width as f32 - 1.0) as usize;
+            let min_y = (y - radius).floor().max(0.0) as usize;
+            let max_y = (y + radius).ceil().min(self.height as f32 - 1.0) as usize;
+
+            for ty in min_y..=max_y {
+                for tx in min_x..=max_x {
+                    if self.tiles[ty][tx] != Tile::Empty {
+                        can_spawn = false;
+                        break;
+                    }
+                }
+                if !can_spawn {
+                    break;
+                }
+            }
+
+            if can_spawn {
+                return (x, y);
             }
         }
     }

@@ -176,7 +176,7 @@ impl GameState {
 
     pub fn create_player(&mut self, map: &Map) -> Player {
         let id = self.next_id();
-        let (x, y) = map.generate_spawn_position();
+        let (x, y) = map.generate_spawn_position(config::PLAYER_RADIUS);
         let player = Player {
             id,
             x,
@@ -338,7 +338,7 @@ impl GameState {
 
     pub fn respawn(&mut self, player_id: u32, map: &Map) {
         if let Some(player) = self.players.get_mut(&player_id) {
-            let (x, y) = map.generate_spawn_position();
+            let (x, y) = map.generate_spawn_position(player.radius);
             player.x = x;
             player.y = y;
             player.health = config::PLAYER_HEALTH;

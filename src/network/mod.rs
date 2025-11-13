@@ -63,6 +63,7 @@ pub fn get_map_from_tcp() -> Option<Map> {
     let listener =
         TcpListener::bind(("0.0.0.0", config::TCP_PORT as u16)).expect("Failed to bind TCP port");
     println!("TCP map listener running on port {}", config::TCP_PORT);
+
     if let Ok((mut stream, addr)) = listener.accept() {
         println!("Incoming TCP connection from {}", addr);
         let mut size_buf = [0u8; 8];
@@ -77,6 +78,6 @@ pub fn get_map_from_tcp() -> Option<Map> {
 
         return Some(map);
     }
-    println!("TCP map listener finished");
+
     None
 }
