@@ -38,7 +38,7 @@ async fn main() {
     });
 
     socket
-        .set_nonblocking(true)
+        .set_nonblocking(false)
         .expect("Failed to set nonblocking");
     send_message(&socket, &ClientMessage::Init, server_addr);
 
