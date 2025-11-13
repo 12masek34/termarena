@@ -10,7 +10,7 @@ use termarena::client::key_event_handler::{listen_move, listen_quit, listen_shoo
 use termarena::client::state::ClientState;
 use termarena::config;
 use termarena::network::state::ServerMessage;
-use termarena::network::{recv_message, start_tcp_map_listener};
+use termarena::network::{get_map_from_tcp, recv_message};
 use termarena::network::{send_message, state::ClientMessage};
 
 #[macroquad::main("Client")]
@@ -26,7 +26,12 @@ async fn main() {
     let client_state = Arc::new(Mutex::new(ClientState::new()));
 
     let client_state_clone_map = Arc::clone(&client_state);
-    thread::spawn(move || start_tcp_map_listener(client_state_clone_map));
+    thread::spawn(move || {
+        let map = get_map_from_tcp();
+        if let Some(map) = map {
+            client_state_clone_map.lock().unwrap().set_map(map);
+        }
+    });
 
     socket
         .set_nonblocking(true)

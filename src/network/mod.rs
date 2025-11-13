@@ -1,5 +1,4 @@
 pub mod state;
-use crate::client::state::ClientState;
 use crate::config;
 use crate::map::Map;
 use serde::{Serialize, de::DeserializeOwned};
@@ -9,8 +8,6 @@ use std::net::SocketAddr;
 use std::net::TcpListener;
 use std::net::TcpStream;
 use std::net::UdpSocket;
-use std::sync::Arc;
-use std::sync::Mutex;
 
 pub fn recv_message<T: DeserializeOwned>(socket: &UdpSocket) -> Option<(T, SocketAddr)> {
     let mut buf = [0u8; 65536];
@@ -62,7 +59,7 @@ pub fn send_map_to_client(map: &Map, client_addr: std::net::SocketAddr) {
     }
 }
 
-pub fn start_tcp_map_listener(client_state: Arc<Mutex<ClientState>>) {
+pub fn get_map_from_tcp() -> Option<Map> {
     let listener =
         TcpListener::bind(("0.0.0.0", config::TCP_PORT as u16)).expect("Failed to bind TCP port");
     println!("TCP map listener running on port {}", config::TCP_PORT);
@@ -76,9 +73,10 @@ pub fn start_tcp_map_listener(client_state: Arc<Mutex<ClientState>>) {
         let mut data = vec![0u8; size];
         stream.read_exact(&mut data).expect("Failed to read map");
         let map: Map = bincode::deserialize(&data).expect("Failed to deserialize map");
-        client_state.lock().unwrap().set_map(map);
         println!("Map received via TCP");
-    }
 
+        return Some(map);
+    }
     println!("TCP map listener finished");
+    None
 }
