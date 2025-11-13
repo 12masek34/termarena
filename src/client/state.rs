@@ -38,10 +38,4 @@ impl ClientState {
             None
         }
     }
-
-    // pub fn set_map(&mut self, map: Map) {
-    //     if self.map.is_none() {
-    //         self.map = Some(Arc::new(Mutex::new(map)));
-    //     }
-    // }
 }
