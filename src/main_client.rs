@@ -43,7 +43,9 @@ async fn main() {
     send_message(&socket, &ClientMessage::Init, server_addr);
 
     let socket_clone_recv = socket.try_clone().unwrap();
-    socket_clone_recv.set_nonblocking(false).expect("Failed to set blocking mode");
+    socket_clone_recv
+        .set_nonblocking(false)
+        .expect("Failed to set blocking mode");
     let client_state_clone = Arc::clone(&client_state);
     thread::spawn(move || {
         loop {
@@ -70,44 +72,47 @@ async fn main() {
         }
     });
 
+    let mut last_update = std::time::Instant::now();
+    let mut loading_frame = 0;
+
     loop {
         clear_background(BLACK);
 
-        let direction = listen_move();
-        if let Some(direction) = direction {
+        if let Some(direction) = listen_move() {
             let _ = tx.send(ClientMessage::Move(direction));
         }
-
         if listen_shoot() {
             let _ = tx.send(ClientMessage::Shoot);
         }
-
         if listen_quit() {
             let _ = tx.send(ClientMessage::Quit);
             break;
         }
 
-        let (gs_arc, current_id, player_pos) = {
-            let locked_client = client_state.lock().unwrap();
-            let player = match locked_client.get_current_player() {
-                Some(p) => p.clone(),
-                None => {
-                    next_frame().await;
-                    continue;
-                }
-            };
-            let gs_arc = match &locked_client.game_state {
-                Some(gs) => Arc::clone(gs),
-                None => {
-                    next_frame().await;
-                    continue;
-                }
-            };
-            (gs_arc, locked_client.id, (player.x, player.y))
-        };
+        let locked_client = client_state.lock().unwrap();
+        let map_ready = map.lock().unwrap().is_some();
+        let gs_ready = locked_client.game_state.is_some();
+        let player_ready = locked_client.get_current_player().is_some();
 
-        map.lock().unwrap().as_mut().map(|m| m.render(player_pos));
-        gs_arc.render(current_id, player_pos);
+        if map_ready && gs_ready && player_ready {
+            let player = locked_client.get_current_player().unwrap().clone();
+            let gs_arc = Arc::clone(locked_client.game_state.as_ref().unwrap());
+            let current_id = locked_client.id;
+
+            drop(locked_client);
+            map.lock()
+                .unwrap()
+                .as_mut()
+                .map(|m| m.render((player.x, player.y)));
+            gs_arc.render(current_id, (player.x, player.y));
+        } else {
+            if last_update.elapsed() > std::time::Duration::from_millis(300) {
+                loading_frame += 1;
+                last_update = std::time::Instant::now();
+            }
+            let loading_text = format!("Loading{}", ".".repeat(loading_frame % 4));
+            draw_text(&loading_text, 20.0, 50.0, 30.0, WHITE);
+        }
 
         next_frame().await;
     }
