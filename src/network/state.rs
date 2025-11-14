@@ -48,11 +48,15 @@ impl MapDownloader {
         (self.received.len(), self.total_chunks as usize)
     }
 
-    pub fn load_chunk(&mut self, chunk: MapChunk) -> Option<Map> {
+    pub fn load_chunk(&mut self, chunk: MapChunk) -> bool {
         self.total_chunks = chunk.total_chunks;
         self.received.insert(chunk.chunk_index, chunk.bytes);
 
-        self.try_build_map()
+        if let Some(_map) = self.try_build_map() {
+            true
+        } else {
+            false
+        }
     }
 
     pub fn try_build_map(&self) -> Option<Map> {

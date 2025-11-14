@@ -1,6 +1,9 @@
 use macroquad::prelude::*;
 use std::env;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
 use std::time::Duration;
+use std::time::Instant;
 use std::{
     net::{SocketAddr, UdpSocket},
     sync::mpsc::{self, Receiver, Sender},
@@ -10,6 +13,7 @@ use std::{
 use termarena::client::key_event_handler::{listen_move, listen_quit, listen_shoot};
 use termarena::client::state::ClientState;
 use termarena::config;
+use termarena::map::Map;
 use termarena::network::recv_message;
 use termarena::network::state::ServerMessage;
 use termarena::network::{send_message, state::ClientMessage, state::MapDownloader};
@@ -26,10 +30,11 @@ async fn main() {
     let (tx, rx): (Sender<ClientMessage>, Receiver<ClientMessage>) = mpsc::channel();
     let socket = UdpSocket::bind("0.0.0.0:0").expect("Failed to bind client socket");
     let client_state = Arc::new(Mutex::new(ClientState::new()));
-    let map = Arc::new(Mutex::new(None));
-    let map_clone = Arc::clone(&map);
+    let map: Arc<Mutex<Option<Arc<Map>>>> = Arc::new(Mutex::new(None));
     let map_downloader = Arc::new(Mutex::new(MapDownloader::new()));
     let map_downloader_recv = Arc::clone(&map_downloader);
+    let map_loaded = Arc::new(AtomicBool::new(false));
+    let map_loaded_clone = Arc::clone(&map_loaded);
 
     socket
         .set_nonblocking(false)
@@ -68,9 +73,8 @@ async fn main() {
                     }
                     ServerMessage::Map(chunk) => {
                         let mut map_downloader_lock = map_downloader_recv.lock().unwrap();
-                        if let Some(new_map) = map_downloader_lock.load_chunk(chunk) {
-                            *map_clone.lock().unwrap() = Some(Arc::new(new_map));
-                        }
+                        map_loaded_clone
+                            .store(map_downloader_lock.load_chunk(chunk), Ordering::Relaxed);
                     }
                     ServerMessage::GameState(state) => {
                         clinet_state_clone_lock.update_state(state);
@@ -87,13 +91,20 @@ async fn main() {
         }
     });
 
-    let mut last_update = std::time::Instant::now();
+    let mut last_update = Instant::now();
     let mut loading_frame = 0;
 
     next_frame().await;
 
     loop {
         clear_background(BLACK);
+
+        if map_loaded.load(Ordering::Relaxed) {
+            let map_downloader_lock = map_downloader.lock().unwrap();
+            if let Some(new_map) = map_downloader_lock.try_build_map() {
+                *map.lock().unwrap() = Some(Arc::new(new_map));
+            }
+        }
 
         if let Some(direction) = listen_move() {
             let _ = tx.send(ClientMessage::Move(direction));
