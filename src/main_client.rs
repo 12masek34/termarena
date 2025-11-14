@@ -1,5 +1,6 @@
 use macroquad::prelude::*;
 use std::env;
+use std::time::Duration;
 use std::{
     net::{SocketAddr, UdpSocket},
     sync::mpsc::{self, Receiver, Sender},
@@ -35,7 +36,19 @@ async fn main() {
         .set_nonblocking(false)
         .expect("Failed to set nonblocking");
     send_message(&socket, &ClientMessage::Init, server_addr);
-    send_message(&socket, &ClientMessage::Map, server_addr);
+
+    let socket_clone = socket.try_clone().unwrap();
+    let map_clone_check = Arc::clone(&map);
+    thread::spawn(move || {
+        loop {
+            if map_clone_check.lock().unwrap().is_some() {
+                break;
+            }
+
+            send_message(&socket_clone, &ClientMessage::Map, server_addr);
+            thread::sleep(Duration::from_secs(30));
+        }
+    });
 
     let socket_clone_recv = socket.try_clone().unwrap();
     socket_clone_recv
