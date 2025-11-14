@@ -1,3 +1,5 @@
+use ::rand::Rng;
+use ::rand::thread_rng;
 use macroquad::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -5,9 +7,11 @@ use std::time::Duration;
 use std::time::Instant;
 
 use crate::config;
+use crate::game::modifier::ModifierKind;
 use crate::map::Map;
 
 use super::bullet::Bullet;
+use super::modifier::Modifier;
 use super::player::Player;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -22,6 +26,10 @@ pub enum Direction {
 pub struct GameState {
     pub players: HashMap<u32, Player>,
     pub bullets: HashMap<u32, Bullet>,
+    pub modifieres: HashMap<u32, Modifier>,
+
+    #[serde(skip_serializing, skip_deserializing, default = "Instant::now")]
+    pub last_spawn_modifieres: Instant,
 }
 
 impl GameState {
@@ -29,6 +37,8 @@ impl GameState {
         Self {
             players: HashMap::new(),
             bullets: HashMap::new(),
+            modifieres: HashMap::new(),
+            last_spawn_modifieres: Instant::now(),
         }
     }
 
@@ -213,6 +223,38 @@ impl GameState {
     pub fn update(&mut self, map: &Map) {
         self.update_bullets(map);
         self.update_players(map);
+        self.spawn_modifiers(map);
+    }
+
+    pub fn spawn_modifiers(&mut self, map: &Map) {
+        if self.last_spawn_modifieres.elapsed() < config::MODIFIER_RESPAWN_TIME {
+            return;
+        }
+        self.last_spawn_modifieres = Instant::now();
+        self.modifieres.clear();
+        let mut rng = thread_rng();
+        let modifiers_count = ((map.width * map.height) as f32 / 500.0).round() as u32;
+
+        for id in 0..modifiers_count {
+            let (mut x, mut y);
+
+            loop {
+                x = rng.gen_range(0..map.width) as f32 + 0.5;
+                y = rng.gen_range(0..map.height) as f32 + 0.5;
+                if !map.is_wall(x, y) {
+                    break;
+                }
+            }
+
+            let modifier = Modifier {
+                id,
+                x,
+                y,
+                kind: ModifierKind::Heal(1),
+            };
+
+            self.modifieres.insert(id, modifier);
+        }
     }
 
     pub fn respawn(&mut self, player_id: u32, map: &Map) {
@@ -226,7 +268,6 @@ impl GameState {
             player.deths += 1;
         }
     }
-
     pub fn render(&self, current_id: Option<u32>, player_pos: (f32, f32)) {
         let offset_x = screen_width() / 2.0 - player_pos.0 * config::TILE_SIZE;
         let offset_y = screen_height() / 2.0 - player_pos.1 * config::TILE_SIZE;
@@ -255,6 +296,10 @@ impl GameState {
 
         for bullet in self.bullets.values() {
             bullet.render(offset_x, offset_y);
+        }
+
+        for modifier in self.modifieres.values() {
+            modifier.render(offset_x, offset_y);
         }
 
         self.render_hud(current_id);
