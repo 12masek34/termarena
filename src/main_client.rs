@@ -90,6 +90,8 @@ async fn main() {
     let mut last_update = std::time::Instant::now();
     let mut loading_frame = 0;
 
+    next_frame().await;
+
     loop {
         clear_background(BLACK);
 
