@@ -1,4 +1,4 @@
-use crate::config::TILE_SIZE;
+use crate::{config::TILE_SIZE, network::state::MapChunk};
 use ::rand::Rng;
 use ::rand::rngs::ThreadRng;
 use ::rand::thread_rng;
@@ -50,6 +50,28 @@ impl Map {
             tiles,
             texture: None,
         }
+    }
+
+    pub fn chunk_map(&self) -> Vec<MapChunk> {
+        const CHUNK_SIZE: usize = 1024;
+
+        let raw = bincode::serialize(self).unwrap();
+        let total_chunks = (raw.len() + CHUNK_SIZE - 1) / CHUNK_SIZE;
+
+        let mut chunks = Vec::with_capacity(total_chunks);
+
+        for i in 0..total_chunks {
+            let start = i * CHUNK_SIZE;
+            let end = (start + CHUNK_SIZE).min(raw.len());
+
+            chunks.push(MapChunk {
+                chunk_index: i as u32,
+                total_chunks: total_chunks as u32,
+                bytes: raw[start..end].to_vec(),
+            });
+        }
+
+        chunks
     }
 
     pub fn generate_spawn_position(&self, radius: f32) -> (f32, f32) {

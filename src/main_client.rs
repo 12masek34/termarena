@@ -10,9 +10,9 @@ use termarena::client::key_event_handler::{listen_move, listen_quit, listen_shoo
 use termarena::client::state::ClientState;
 use termarena::config;
 use termarena::map::Map;
+use termarena::network::recv_message;
 use termarena::network::state::ServerMessage;
-use termarena::network::{get_map_from_tcp, recv_message};
-use termarena::network::{send_message, state::ClientMessage};
+use termarena::network::{send_message, state::ClientMessage, state::MapDownloader};
 
 #[macroquad::main("Client")]
 async fn main() {
@@ -27,20 +27,15 @@ async fn main() {
     let socket = UdpSocket::bind("0.0.0.0:0").expect("Failed to bind client socket");
     let client_state = Arc::new(Mutex::new(ClientState::new()));
     let map = Arc::new(Mutex::new(None::<Map>));
-
     let map_clone = Arc::clone(&map);
-    thread::spawn(move || {
-        if let Some(new_map) = get_map_from_tcp() {
-            *map_clone.lock().unwrap() = Some(new_map);
-        } else {
-            eprintln!("Error received map");
-        }
-    });
+    let map_downloader = Arc::new(Mutex::new(MapDownloader::new()));
+    let map_downloader_recv = Arc::clone(&map_downloader);
 
     socket
         .set_nonblocking(false)
         .expect("Failed to set nonblocking");
     send_message(&socket, &ClientMessage::Init, server_addr);
+    send_message(&socket, &ClientMessage::Map, server_addr);
 
     let socket_clone_recv = socket.try_clone().unwrap();
     socket_clone_recv
@@ -54,6 +49,12 @@ async fn main() {
                 match msg {
                     ServerMessage::InitPlayer(player) => {
                         clinet_state_clone_lock.init_player(player);
+                    }
+                    ServerMessage::Map(chunk) => {
+                        let mut map_downloader_lock = map_downloader_recv.lock().unwrap();
+                        if let Some(new_map) = map_downloader_lock.load_chunk(chunk) {
+                            *map_clone.lock().unwrap() = Some(new_map);
+                        }
                     }
                     ServerMessage::GameState(state) => {
                         clinet_state_clone_lock.update_state(state);
@@ -110,6 +111,22 @@ async fn main() {
             }
             let loading_text = format!("Loading{}", ".".repeat(loading_frame % 4));
             draw_text(&loading_text, 20.0, 50.0, 30.0, WHITE);
+
+            let dl = map_downloader.lock().unwrap();
+            let (received, total) = dl.progress();
+
+            if total > 0 {
+                let percent = received as f32 / total as f32 * 100.0;
+                let prog_text =
+                    format!("Downloading map: {}/{} ({:.1}%)", received, total, percent);
+                draw_text(&prog_text, 20.0, 90.0, 25.0, WHITE);
+
+                let bar_width = 300.0;
+                let filled = bar_width * (received as f32 / total as f32);
+
+                draw_rectangle(20.0, 110.0, bar_width, 20.0, GRAY);
+                draw_rectangle(20.0, 110.0, filled, 20.0, GREEN);
+            }
         }
 
         next_frame().await;

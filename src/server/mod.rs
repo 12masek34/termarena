@@ -14,7 +14,7 @@ use crate::{
     game::state::GameState,
     map::Map,
     network::{
-        recv_message, send_map_to_client, send_message,
+        recv_message, send_message,
         state::{ClientMessage, ServerMessage},
     },
 };
@@ -89,10 +89,15 @@ pub fn run_server(port: String) {
                         let mut clients_lock = clients.lock().unwrap();
                         clients_lock.insert(src, player.id);
                     }
-                    send_map_to_client(&map, src);
                     let _ = tx
                         .send(ServerMessage::InitPlayer(player))
                         .expect("failed to send to net thread");
+                }
+                ClientMessage::Map => {
+                    let chunks = map.chunk_map();
+                    for chunk in chunks {
+                        tx.send(ServerMessage::Map(chunk)).unwrap();
+                    }
                 }
                 ClientMessage::Move(direction) => {
                     {
