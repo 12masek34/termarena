@@ -277,7 +277,7 @@ impl GameState {
                 id,
                 x,
                 y,
-                kind: ModifierKind::Heal(1),
+                kind: ModifierKind::random(&mut rng),
             };
 
             self.modifieres.insert(id, modifier);
