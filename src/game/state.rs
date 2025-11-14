@@ -153,14 +153,15 @@ impl GameState {
         self.bullets.keys().max().map(|id| id + 1).unwrap_or(1)
     }
 
-    pub fn update_bullets(&mut self, map: &Map) {
+    pub fn update_bullets(&mut self, map: &Map, delta_time: f32) {
         let mut to_remove = Vec::new();
         let mut to_respawn = Vec::new();
 
         for bullet in self.bullets.values_mut() {
-            bullet.x += bullet.dx * bullet.speed;
-            bullet.y += bullet.dy * bullet.speed;
-            bullet.traveled += bullet.speed;
+            let step = bullet.speed * delta_time;
+            bullet.x += bullet.dx * step;
+            bullet.y += bullet.dy * step;
+            bullet.traveled += step;
 
             if map.is_wall(bullet.x, bullet.y) || bullet.traveled >= bullet.range {
                 to_remove.push(bullet.id);
@@ -173,9 +174,7 @@ impl GameState {
 
                     if player.health == 0 {
                         to_respawn.push(*player_id);
-                        let bullet_owner = self.players.get_mut(&bullet.owner_id);
-
-                        if let Some(owner) = bullet_owner {
+                        if let Some(owner) = self.players.get_mut(&bullet.owner_id) {
                             owner.kills += 1;
                         }
                     }
@@ -257,7 +256,7 @@ impl GameState {
     }
 
     pub fn update(&mut self, map: &Map, delta_time: f32) {
-        self.update_bullets(map);
+        self.update_bullets(map, delta_time);
         self.update_players(map, delta_time);
         self.spawn_modifiers(map);
     }
