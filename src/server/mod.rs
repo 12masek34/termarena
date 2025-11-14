@@ -53,7 +53,7 @@ pub fn run_server(port: String) {
     let map_clone = Arc::clone(&map);
     let tx_clone = tx.clone();
     thread::spawn(move || {
-        let tick_rate = Duration::from_millis(50);
+        let tick_rate = Duration::from_millis(30);
         let mut last_update = Instant::now();
         loop {
             let start = Instant::now();

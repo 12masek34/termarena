@@ -38,7 +38,7 @@ impl ModifierKind {
         if roll < 25 {
             ModifierKind::Heal(1)
         } else if roll < 85 {
-            ModifierKind::Speed(0.1)
+            ModifierKind::Speed(1.0)
         } else {
             ModifierKind::Damage(1)
         }
