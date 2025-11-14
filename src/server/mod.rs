@@ -53,12 +53,16 @@ pub fn run_server(port: String) {
     let map_clone = Arc::clone(&map);
     let tx_clone = tx.clone();
     thread::spawn(move || {
-        let tick_rate = Duration::from_millis(30);
+        let tick_rate = Duration::from_millis(50);
+        let mut last_update = Instant::now();
         loop {
             let start = Instant::now();
             let snapshot = {
                 let mut game_state_lock = game_state_clone.lock().unwrap();
-                game_state_lock.update(&map_clone);
+                let now = Instant::now();
+                let delta_time = (now - last_update).as_secs_f32();
+                last_update = now;
+                game_state_lock.update(&map_clone, delta_time);
                 game_state_lock.get_snapshot()
             };
             let _ = tx_clone.send(ServerMessage::GameState(snapshot));

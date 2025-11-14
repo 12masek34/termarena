@@ -194,7 +194,7 @@ impl GameState {
         }
     }
 
-    pub fn update_players(&mut self, map: &Map) {
+    pub fn update_players(&mut self, map: &Map, delta_time: f32) {
         let mut picked_modifiers = Vec::new();
 
         for player in self.players.values_mut() {
@@ -204,39 +204,48 @@ impl GameState {
                 let dy = ty - player.y;
                 let dist = (dx * dx + dy * dy).sqrt();
 
-                if dist <= player.walk_speed {
+                let step = player.walk_speed * delta_time;
+                if dist <= step {
                     player.x = tx;
                     player.y = ty;
                     player.is_moving = false;
                     player.move_target = None;
                 } else {
-                    player.x += player.walk_speed * dx / dist;
-                    player.y += player.walk_speed * dy / dist;
+                    let next_x = player.x + step * dx / dist;
+                    let next_y = player.y + step * dy / dist;
+
+                    if !map.is_wall(next_x, next_y) {
+                        player.x = next_x;
+                        player.y = next_y;
+                    } else {
+                        player.is_moving = false;
+                        player.move_target = None;
+                    }
                 }
+            }
 
-                if map.is_wall(player.x, player.y) {
-                    player.is_moving = false;
-                    player.move_target = None;
-                }
+            if map.is_wall(player.x, player.y) {
+                player.is_moving = false;
+                player.move_target = None;
+            }
 
-                for (id, modifier) in &self.modifieres {
-                    let dx = modifier.x - player.x;
-                    let dy = modifier.y - player.y;
-                    let dist = (dx * dx + dy * dy).sqrt();
+            for (id, modifier) in &self.modifieres {
+                let dx = modifier.x - player.x;
+                let dy = modifier.y - player.y;
+                let dist = (dx * dx + dy * dy).sqrt();
 
-                    if dist < 1.0 {
-                        picked_modifiers.push(*id);
-                        match modifier.kind {
-                            ModifierKind::Heal(health) => {
-                                player.health += health;
-                                player.max_health += health;
-                            }
-                            ModifierKind::Speed(speed) => {
-                                player.walk_speed += speed;
-                            }
-                            ModifierKind::Damage(damage) => {
-                                player.bullet_damage += damage;
-                            }
+                if dist < 1.0 {
+                    picked_modifiers.push(*id);
+                    match modifier.kind {
+                        ModifierKind::Heal(health) => {
+                            player.health += health;
+                            player.max_health += health;
+                        }
+                        ModifierKind::Speed(speed) => {
+                            player.walk_speed += speed;
+                        }
+                        ModifierKind::Damage(damage) => {
+                            player.bullet_damage += damage;
                         }
                     }
                 }
@@ -247,9 +256,9 @@ impl GameState {
         }
     }
 
-    pub fn update(&mut self, map: &Map) {
+    pub fn update(&mut self, map: &Map, delta_time: f32) {
         self.update_bullets(map);
-        self.update_players(map);
+        self.update_players(map, delta_time);
         self.spawn_modifiers(map);
     }
 
