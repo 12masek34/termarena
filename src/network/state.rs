@@ -34,7 +34,6 @@ pub struct MapChunk {
 pub struct MapDownloader {
     pub total_chunks: u32,
     pub received: HashMap<u32, Vec<u8>>,
-    pub last_update: Instant,
 }
 
 impl MapDownloader {
@@ -42,7 +41,6 @@ impl MapDownloader {
         Self {
             total_chunks: 0,
             received: HashMap::new(),
-            last_update: Instant::now(),
         }
     }
 
