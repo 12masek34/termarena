@@ -10,7 +10,6 @@ use std::{
 use termarena::client::key_event_handler::{listen_move, listen_quit, listen_shoot};
 use termarena::client::state::ClientState;
 use termarena::config;
-use termarena::map::Map;
 use termarena::network::recv_message;
 use termarena::network::state::ServerMessage;
 use termarena::network::{send_message, state::ClientMessage, state::MapDownloader};
@@ -27,7 +26,7 @@ async fn main() {
     let (tx, rx): (Sender<ClientMessage>, Receiver<ClientMessage>) = mpsc::channel();
     let socket = UdpSocket::bind("0.0.0.0:0").expect("Failed to bind client socket");
     let client_state = Arc::new(Mutex::new(ClientState::new()));
-    let map: Arc<Mutex<Option<Arc<Map>>>> = Arc::new(Mutex::new(None));
+    let map = Arc::new(Mutex::new(None));
     let map_clone = Arc::clone(&map);
     let map_downloader = Arc::new(Mutex::new(MapDownloader::new()));
     let map_downloader_recv = Arc::clone(&map_downloader);
