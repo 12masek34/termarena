@@ -12,6 +12,7 @@ use crate::map::Map;
 
 use super::bullet::Bullet;
 use super::modifier::Modifier;
+use super::player;
 use super::player::Player;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -195,6 +196,8 @@ impl GameState {
     }
 
     pub fn update_players(&mut self, map: &Map) {
+        let mut picked_modifiers = Vec::new();
+
         for player in self.players.values_mut() {
             if player.is_moving {
                 let (tx, ty) = player.move_target.unwrap();
@@ -216,7 +219,20 @@ impl GameState {
                     player.is_moving = false;
                     player.move_target = None;
                 }
+
+                for (id, modifier) in &self.modifieres {
+                    let dx = modifier.x - player.x;
+                    let dy = modifier.y - player.y;
+                    let dist = (dx * dx + dy * dy).sqrt();
+
+                    if dist < 1.0 {
+                        picked_modifiers.push(*id);
+                    }
+                }
             }
+        }
+        for id in picked_modifiers {
+            self.modifieres.remove(&id);
         }
     }
 
