@@ -27,7 +27,7 @@ async fn main() {
     let (tx, rx): (Sender<ClientMessage>, Receiver<ClientMessage>) = mpsc::channel();
     let socket = UdpSocket::bind("0.0.0.0:0").expect("Failed to bind client socket");
     let client_state = Arc::new(Mutex::new(ClientState::new()));
-    let map = Arc::new(Mutex::new(None::<Map>));
+    let map: Arc<Mutex<Option<Arc<Map>>>> = Arc::new(Mutex::new(None));
     let map_clone = Arc::clone(&map);
     let map_downloader = Arc::new(Mutex::new(MapDownloader::new()));
     let map_downloader_recv = Arc::clone(&map_downloader);
@@ -41,7 +41,11 @@ async fn main() {
     let map_clone_check = Arc::clone(&map);
     thread::spawn(move || {
         loop {
-            if map_clone_check.lock().unwrap().is_some() {
+            let map_ready = {
+                let map = map_clone_check.lock().unwrap();
+                map.is_some()
+            };
+            if map_ready {
                 break;
             }
 
@@ -66,7 +70,7 @@ async fn main() {
                     ServerMessage::Map(chunk) => {
                         let mut map_downloader_lock = map_downloader_recv.lock().unwrap();
                         if let Some(new_map) = map_downloader_lock.load_chunk(chunk) {
-                            *map_clone.lock().unwrap() = Some(new_map);
+                            *map_clone.lock().unwrap() = Some(Arc::new(new_map));
                         }
                     }
                     ServerMessage::GameState(state) => {
@@ -110,12 +114,13 @@ async fn main() {
             let player = locked_client.get_current_player().unwrap().clone();
             let gs_arc = Arc::clone(locked_client.game_state.as_ref().unwrap());
             let current_id = locked_client.id;
-
             drop(locked_client);
-            map.lock()
-                .unwrap()
-                .as_mut()
-                .map(|m| m.render((player.x, player.y)));
+
+            if let Some(map_arc) = map.lock().unwrap().as_ref() {
+                map_arc.init_texture();
+                map_arc.render((player.x, player.y));
+            }
+
             gs_arc.render(current_id, (player.x, player.y));
         } else {
             if last_update.elapsed() > std::time::Duration::from_millis(300) {
@@ -125,8 +130,10 @@ async fn main() {
             let loading_text = format!("Loading{}", ".".repeat(loading_frame % 4));
             draw_text(&loading_text, 20.0, 50.0, 30.0, WHITE);
 
-            let dl = map_downloader.lock().unwrap();
-            let (received, total) = dl.progress();
+            let (received, total) = {
+                let dl = map_downloader.lock().unwrap();
+                dl.progress()
+            };
 
             if total > 0 {
                 let percent = received as f32 / total as f32 * 100.0;

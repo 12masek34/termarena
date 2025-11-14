@@ -4,7 +4,7 @@ use ::rand::rngs::ThreadRng;
 use ::rand::thread_rng;
 use macroquad::prelude::*;
 use serde::{Deserialize, Serialize};
-use std::collections::VecDeque;
+use std::{collections::VecDeque, sync::Mutex};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub enum Tile {
@@ -12,14 +12,15 @@ pub enum Tile {
     Wall,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Map {
     pub width: usize,
     pub height: usize,
     pub tiles: Vec<Vec<Tile>>,
 
     #[serde(skip)]
-    pub texture: Option<Texture2D>,
+    #[serde(default)]
+    pub texture: Mutex<Option<Texture2D>>,
 }
 
 impl Map {
@@ -48,7 +49,7 @@ impl Map {
             width,
             height,
             tiles,
-            texture: None,
+            texture: Mutex::new(None),
         }
     }
 
@@ -216,11 +217,30 @@ impl Map {
         false
     }
 
-    pub fn render(&mut self, player_pos: (f32, f32)) {
-        if self.texture.is_none() {
-            self.set_texture()
-        }
+    pub fn init_texture(&self) {
+        let mut texture_guard = self.texture.lock().unwrap();
+        if texture_guard.is_none() {
+            let mut image =
+                Image::gen_image_color(self.width as u16, self.height as u16, LIGHTGRAY);
 
+            for y in 0..self.height {
+                for x in 0..self.width {
+                    let color = match self.tiles[y][x] {
+                        Tile::Empty => LIGHTGRAY,
+                        Tile::Wall => DARKBROWN,
+                    };
+                    image.set_pixel(x as u32, y as u32, color);
+                }
+            }
+
+            let texture = Texture2D::from_image(&image);
+            texture.set_filter(FilterMode::Nearest);
+
+            *texture_guard = Some(texture);
+        }
+    }
+
+    pub fn render(&self, player_pos: (f32, f32)) {
         self.render_border();
         self.render_texture(player_pos);
     }
@@ -244,24 +264,6 @@ impl Map {
         );
     }
 
-    pub fn set_texture(&mut self) {
-        let mut image = Image::gen_image_color(self.width as u16, self.height as u16, LIGHTGRAY);
-
-        for y in 0..self.height {
-            for x in 0..self.width {
-                let color = match self.tiles[y][x] {
-                    Tile::Empty => LIGHTGRAY,
-                    Tile::Wall => DARKBROWN,
-                };
-                image.set_pixel(x as u32, y as u32, color);
-            }
-        }
-
-        let texture = Texture2D::from_image(&image);
-        texture.set_filter(FilterMode::Nearest);
-        self.texture = Some(texture);
-    }
-
     pub fn render_texture(&self, player_pos: (f32, f32)) {
         let screen_center_x = screen_width() / 2.0;
         let screen_center_y = screen_height() / 2.0;
@@ -277,7 +279,8 @@ impl Map {
         let offset_x = screen_center_x - (player_pos.0 - start_x as f32) * TILE_SIZE;
         let offset_y = screen_center_y - (player_pos.1 - start_y as f32) * TILE_SIZE;
 
-        if let Some(texture) = &self.texture {
+        let texture_lock = self.texture.lock().unwrap();
+        if let Some(texture) = &*texture_lock {
             draw_texture_ex(
                 texture,
                 offset_x,
