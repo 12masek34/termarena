@@ -8,6 +8,7 @@ pub enum ModifierKind {
     Heal(u32),
     Speed(f32),
     Damage(u32),
+    FireRate(f32),
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -26,6 +27,7 @@ impl Modifier {
             ModifierKind::Heal(_) => RED,
             ModifierKind::Damage(_) => MAGENTA,
             ModifierKind::Speed(_) => GREEN,
+            ModifierKind::FireRate(_) => LIME,
         };
         draw_circle(draw_x, draw_y, config::TILE_SIZE * 0.5, color);
     }
@@ -33,14 +35,12 @@ impl Modifier {
 
 impl ModifierKind {
     pub fn random(rng: &mut impl Rng) -> Self {
-        let roll = rng.gen_range(0..100);
-
-        if roll < 25 {
-            ModifierKind::Heal(1)
-        } else if roll < 85 {
-            ModifierKind::Speed(1.0)
-        } else {
-            ModifierKind::Damage(1)
+        let choice = rng.gen_range(0..4);
+        match choice {
+            0 => ModifierKind::Heal(1),
+            1 => ModifierKind::Speed(1.0),
+            2 => ModifierKind::Damage(1),
+            _ => ModifierKind::FireRate(0.5),
         }
     }
 }

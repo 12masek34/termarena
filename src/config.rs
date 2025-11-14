@@ -11,7 +11,7 @@ pub const BULLET_RANGE: f32 = 15.0;
 pub const BULLET_DAMAGE: u32 = 1;
 pub const STEP: f32 = 2.0;
 pub const HIT_RADIUS: f32 = 0.5;
-pub const FIRE_RATE: f32 = 1.0;
+pub const FIRE_RATE: f32 = 0.8;
 pub const MODIFIER_RESPAWN_TIME: Duration = Duration::from_secs(13);
 
 pub const UDP_PORT: usize = 8888;

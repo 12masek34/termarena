@@ -115,9 +115,9 @@ impl GameState {
         if let Some(id) = player_id {
             let next_bullet_id = self.next_bullet_id();
             if let Some(player) = self.players.get_mut(&id) {
-                let fire_rate = Duration::from_secs(player.fire_rate as u64);
+                let fire_interval = Duration::from_secs_f32(1.0 / player.fire_rate);
 
-                if player.last_shot.elapsed() < fire_rate {
+                if player.last_shot.elapsed() < fire_interval {
                     return;
                 }
 
@@ -245,6 +245,9 @@ impl GameState {
                         }
                         ModifierKind::Damage(damage) => {
                             player.bullet_damage += damage;
+                        }
+                        ModifierKind::FireRate(fire_rate) => {
+                            player.fire_rate += fire_rate;
                         }
                     }
                 }
