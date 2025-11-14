@@ -5,8 +5,8 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub enum ModifierKind {
     Heal(u32),
-    SpeedBoost(f32),
-    DamageBoost(f32),
+    Speed(f32),
+    Damage(u32),
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]

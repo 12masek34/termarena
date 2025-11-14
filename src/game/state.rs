@@ -12,7 +12,6 @@ use crate::map::Map;
 
 use super::bullet::Bullet;
 use super::modifier::Modifier;
-use super::player;
 use super::player::Player;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -227,6 +226,18 @@ impl GameState {
 
                     if dist < 1.0 {
                         picked_modifiers.push(*id);
+                        match modifier.kind {
+                            ModifierKind::Heal(health) => {
+                                player.health += health;
+                                player.max_health += health;
+                            }
+                            ModifierKind::Speed(speed) => {
+                                player.walk_speed += speed;
+                            }
+                            ModifierKind::Damage(damage) => {
+                                player.bullet_damage += damage;
+                            }
+                        }
                     }
                 }
             }
