@@ -1,7 +1,7 @@
 use std::sync::{Arc, Mutex};
 
 use crate::{
-    game::state::{GameState, Player},
+    game::{player::Player, state::GameState},
     map::Map,
 };
 

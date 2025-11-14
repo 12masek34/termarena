@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    game::state::{Direction, GameState, Player},
+    game::{player::Player, state::Direction, state::GameState},
     map::Map,
 };
 
