@@ -249,6 +249,9 @@ impl GameState {
                         ModifierKind::FireRate(fire_rate) => {
                             player.fire_rate += fire_rate;
                         }
+                        ModifierKind::BulletRange(bullet_range) => {
+                            player.bullet_range += bullet_range;
+                        }
                     }
                 }
             }
