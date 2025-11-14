@@ -56,7 +56,7 @@ async fn main() {
             }
 
             send_message(&socket_clone, &ClientMessage::Map, server_addr);
-            thread::sleep(Duration::from_secs(30));
+            thread::sleep(Duration::from_secs(3));
         }
     });
 
