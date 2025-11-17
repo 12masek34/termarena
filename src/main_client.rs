@@ -112,7 +112,7 @@ async fn main() {
                 *map.lock().unwrap() = Some(Arc::new(new_map));
             }
         } else {
-            thread::sleep(Duration::from_millis(500));
+            thread::sleep(Duration::from_millis(50));
         }
 
         if let Some(direction) = listen_move() {
