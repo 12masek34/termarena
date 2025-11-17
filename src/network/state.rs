@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use serde::{Deserialize, Serialize};
 
@@ -17,7 +17,7 @@ pub enum ServerMessage {
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub enum ClientMessage {
     Init,
-    Map,
+    Map(HashSet<u32>),
     Quit,
     Move(Direction),
     Shoot,
@@ -46,6 +46,10 @@ impl MapDownloader {
 
     pub fn progress(&self) -> (usize, usize) {
         (self.received.len(), self.total_chunks as usize)
+    }
+
+    pub fn get_exist_chank_id(&self) -> HashSet<u32> {
+        self.received.keys().cloned().collect()
     }
 
     pub fn load_chunk(&mut self, chunk: MapChunk) -> bool {

@@ -33,6 +33,7 @@ async fn main() {
     let map: Arc<Mutex<Option<Arc<Map>>>> = Arc::new(Mutex::new(None));
     let map_downloader = Arc::new(Mutex::new(MapDownloader::new()));
     let map_downloader_recv = Arc::clone(&map_downloader);
+    let map_downloader_send = Arc::clone(&map_downloader);
     let map_loaded = Arc::new(AtomicBool::new(false));
     let map_loaded_clone = Arc::clone(&map_loaded);
 
@@ -53,7 +54,13 @@ async fn main() {
                 break;
             }
 
-            send_message(&socket_clone, &ClientMessage::Map, server_addr);
+            let map_chank_ids = { map_downloader_send.lock().unwrap().get_exist_chank_id() };
+
+            send_message(
+                &socket_clone,
+                &ClientMessage::Map(map_chank_ids),
+                server_addr,
+            );
             thread::sleep(Duration::from_secs(3));
         }
     });
@@ -104,6 +111,8 @@ async fn main() {
             if let Some(new_map) = map_downloader_lock.try_build_map() {
                 *map.lock().unwrap() = Some(Arc::new(new_map));
             }
+        } else {
+            thread::sleep(Duration::from_millis(500));
         }
 
         if let Some(direction) = listen_move() {

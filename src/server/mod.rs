@@ -97,10 +97,12 @@ pub fn run_server(port: String) {
                         .send(ServerMessage::InitPlayer(player))
                         .expect("failed to send to net thread");
                 }
-                ClientMessage::Map => {
+                ClientMessage::Map(chunk_ids) => {
                     let chunks = map.chunk_map();
                     for chunk in chunks {
-                        tx.send(ServerMessage::Map(chunk)).unwrap();
+                        if !chunk_ids.contains(&chunk.chunk_index) {
+                            tx.send(ServerMessage::Map(chunk)).unwrap();
+                        }
                     }
                 }
                 ClientMessage::Move(direction) => {
