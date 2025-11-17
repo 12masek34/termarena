@@ -1,0 +1,214 @@
+#+TITLE: Rust UDP Game — Server & Client
+
+* Overview
+
+This project is a simple Rust-based multiplayer game using *UDP* for fast
+real-time communication. It consists of two components:
+
+- *Server* — manages players, updates game state, sends world snapshots, and
+  streams the game map in chunks.
+- *Client* — connects to the server, downloads the map, sends player actions,
+  and renders the world using *Macroquad*.
+
+The project demonstrates:
+
+- UDP networking in Rust
+- Custom message protocol (client <-> server)
+- Chunked transfer of large data (map)
+- Multithreading using =Arc=, =Mutex=, =thread::spawn=
+- Real-time rendering using Macroquad
+
+---
+
+* Project Structure
+
+#+begin_src text
+src/
+├── client/
+│   ├── key_event_handler.rs   ; keyboard input & actions
+│   ├── state.rs               ; client-side game & map state
+│   └── mod.rs
+│
+├── game/
+│   ├── bullet.rs              ; bullets & firing logic
+│   ├── modifier.rs            ; future modifiers / buffs
+│   ├── player.rs              ; player data & movement
+│   ├── state.rs               ; core game state (players, bullets)
+│   └── mod.rs
+│
+├── map/
+│   └── mod.rs                 ; map data, chunking, rendering
+│
+├── network/
+│   ├── state.rs               ; message structs, serialization
+│   └── mod.rs
+│
+├── server/
+│   └── mod.rs                 ; UDP server logic
+│
+├── ui/
+│   ├── loading.rs             ; loading screen animation
+│   └── mod.rs
+│
+├── utils/
+│   └── mod.rs                 ; helper utilities
+│
+├── config.rs                  ; shared constants & configuration
+├── lib.rs                     ; shared module exports
+├── main_client.rs             ; entry point for client
+└── main_server.rs             ; entry point for server
+#+end_src
+
+---
+
+* Requirements
+- Rust 1.75+
+- Cargo
+- Macroquad (installed automatically)
+- No additional system dependencies required
+
+---
+
+* Running the Server
+
+#+begin_src bash
+cargo run --bin server -- 8888
+#+end_src
+
+The server:
+
+- accepts incoming UDP clients
+- updates the game state ~33 FPS (tick = 30 ms)
+- broadcasts world snapshots to all clients
+- sends the map in chunks on request
+- handles:
+  - =Init=
+  - =Map=
+  - =Move=
+  - =Shoot=
+  - =Quit=
+
+---
+
+* Running the Client
+
+#+begin_src bash
+cargo run --bin client -- 127.0.0.1:8888
+#+end_src
+
+If no address is provided, the client uses the default from =config.rs=.
+
+Client workflow:
+
+1. Sends =Init=
+2. Requests map chunks (`Map`)
+3. Displays loading screen until map + state are ready
+4. Renders map and players in Macroquad
+5. Sends input events:
+   - *WASD* — movement
+   - *Space* — shoot
+   - *Esc* — quit
+
+---
+
+* Networking Protocol
+
+**Client → Server**
+- =Init=
+- =Map= (request chunk batch)
+- =Move(Direction)=
+- =Shoot=
+- =Quit=
+
+**Server → Client**
+- =InitPlayer(Player)=
+- =Map(MapChunk)=
+- =GameState(Snapshot)=
+
+---
+
+* Map Transfer
+
+The map is large, so it is split into chunks.
+
+Server:
+
+#+begin_src rust
+let chunks = map.chunk_map();
+for chunk in chunks {
+    tx.send(ServerMessage::Map(chunk)).unwrap();
+}
+#+end_src
+
+Client reconstructs the map:
+
+#+begin_src rust
+map_downloader.load_chunk(chunk);
+#+end_src
+
+Once all chunks are received, the map is built and rendered.
+
+---
+
+* Server Game Loop
+
+A dedicated thread runs the update cycle:
+
+#+begin_src rust
+loop {
+    game_state.update(delta_time);
+    broadcast(GameState);
+    sleep(30 ms);
+}
+#+end_src
+
+Players move, fire, collide, and the server sends snapshots to all clients.
+
+---
+
+* Client Rendering
+
+After loading the game state and the map:
+
+#+begin_src rust
+map.render(player_position);
+game_state.render(current_player_id, camera_position);
+#+end_src
+
+Macroquad main loop:
+
+#+begin_src rust
+loop {
+    draw();
+    next_frame().await;
+}
+#+end_src
+
+---
+
+* Known Limitations
+
+- UDP has no guaranteed packet delivery
+- No anti-cheat
+- The map is requested on each connection
+- No interpolation or prediction for smooth movement
+- No reliability layer for important packets
+
+---
+
+* Possible Improvements
+
+- Switch from raw UDP to *QUIC (quinn)* or *ENet*
+- Compression of map chunks
+- Client-side prediction & interpolation
+- Reliable/unreliable message separation
+- Send only changed parts of game state
+- Add lobby/authentication system
+
+---
+
+* License
+
+MIT or any license you prefer.
+
+---
