@@ -48,7 +48,7 @@ impl MapDownloader {
         (self.received.len(), self.total_chunks as usize)
     }
 
-    pub fn get_exist_chank_id(&self) -> HashSet<u32> {
+    pub fn get_exist_chunk_id(&self) -> HashSet<u32> {
         self.received.keys().cloned().collect()
     }
 

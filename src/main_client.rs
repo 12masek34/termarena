@@ -54,11 +54,11 @@ async fn main() {
                 break;
             }
 
-            let map_chank_ids = { map_downloader_send.lock().unwrap().get_exist_chank_id() };
+            let map_chunk_ids = { map_downloader_send.lock().unwrap().get_exist_chunk_id() };
 
             send_message(
                 &socket_clone,
-                &ClientMessage::Map(map_chank_ids),
+                &ClientMessage::Map(map_chunk_ids),
                 server_addr,
             );
             thread::sleep(Duration::from_secs(3));
