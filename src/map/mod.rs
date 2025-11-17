@@ -217,7 +217,7 @@ impl Map {
         false
     }
 
-    pub fn init_texture(&self) {
+    pub fn init_texture(&self) -> bool {
         let mut texture_guard = self.texture.lock().unwrap();
         if texture_guard.is_none() {
             let mut image =
@@ -237,7 +237,9 @@ impl Map {
             texture.set_filter(FilterMode::Nearest);
 
             *texture_guard = Some(texture);
+            return true;
         }
+        return false;
     }
 
     pub fn render(&self, player_pos: (f32, f32)) {

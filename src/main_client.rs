@@ -36,6 +36,7 @@ async fn main() {
     let map_downloader_send = Arc::clone(&map_downloader);
     let map_loaded = Arc::new(AtomicBool::new(false));
     let map_loaded_clone = Arc::clone(&map_loaded);
+    let mut texture_inited = false;
 
     socket
         .set_nonblocking(false)
@@ -108,7 +109,12 @@ async fn main() {
 
         if map_loaded.load(Ordering::Relaxed) {
             let map_downloader_lock = map_downloader.lock().unwrap();
-            if let Some(new_map) = map_downloader_lock.try_build_map() {
+            if map.lock().unwrap().is_none()
+                && let Some(new_map) = map_downloader_lock.try_build_map()
+            {
+                if !texture_inited {
+                    texture_inited = new_map.init_texture();
+                }
                 *map.lock().unwrap() = Some(Arc::new(new_map));
             }
         } else {
@@ -138,7 +144,6 @@ async fn main() {
             drop(locked_client);
 
             if let Some(map_arc) = map.lock().unwrap().as_ref() {
-                map_arc.init_texture();
                 map_arc.render((player.x, player.y));
             }
 
