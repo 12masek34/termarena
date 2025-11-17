@@ -378,6 +378,7 @@ impl GameState {
             player.deths += 1;
         }
     }
+
     pub fn render(&self, current_id: Option<u32>, player_pos: (f32, f32)) {
         let offset_x = screen_width() / 2.0 - player_pos.0 * config::TILE_SIZE;
         let offset_y = screen_height() / 2.0 - player_pos.1 * config::TILE_SIZE;
