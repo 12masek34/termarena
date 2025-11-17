@@ -303,7 +303,7 @@ impl GameState {
             let (x, y) = map.generate_spawn_position(player.radius);
             player.x = x;
             player.y = y;
-            player.health = config::PLAYER_HEALTH;
+            player.health = player.max_health;
             player.direction = Direction::Up;
             player.last_shot = Instant::now() - Duration::from_secs(5);
             player.deths += 1;
