@@ -3,7 +3,10 @@ use std::collections::{HashMap, HashSet};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    game::{player::Player, state::Direction, state::GameState},
+    game::{
+        player::Player,
+        state::{Direction, GameState, GameStateDiff},
+    },
     map::Map,
 };
 
@@ -12,6 +15,7 @@ pub enum ServerMessage {
     InitPlayer(Player),
     Map(MapChunk),
     GameState(GameState),
+    GameStateDiff(GameStateDiff),
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]

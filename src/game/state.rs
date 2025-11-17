@@ -30,6 +30,19 @@ pub struct GameState {
 
     #[serde(skip_serializing, skip_deserializing, default = "Instant::now")]
     pub last_spawn_modifieres: Instant,
+
+    #[serde(skip_serializing, skip_deserializing, default)]
+    pub prev_state: Option<Box<GameState>>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct GameStateDiff {
+    pub players: HashMap<u32, Player>,
+    pub removed_players: Vec<u32>,
+    pub bullets: HashMap<u32, Bullet>,
+    pub removed_bullets: Vec<u32>,
+    pub modifieres: HashMap<u32, Modifier>,
+    pub removed_modifieres: Vec<u32>,
 }
 
 impl GameState {
@@ -39,6 +52,7 @@ impl GameState {
             bullets: HashMap::new(),
             modifieres: HashMap::new(),
             last_spawn_modifieres: Instant::now(),
+            prev_state: None,
         }
     }
 
@@ -52,8 +66,63 @@ impl GameState {
         }
     }
 
-    pub fn get_snapshot(&self) -> Self {
-        self.clone()
+    pub fn get_snapshot(&mut self) -> Self {
+        let snapshot = self.clone();
+        self.prev_state = Some(Box::new(snapshot.clone()));
+        snapshot
+    }
+
+    pub fn get_snapshot_diff(&mut self) -> GameStateDiff {
+        let mut diff = GameStateDiff {
+            players: HashMap::new(),
+            removed_players: vec![],
+            bullets: HashMap::new(),
+            removed_bullets: vec![],
+            modifieres: HashMap::new(),
+            removed_modifieres: vec![],
+        };
+
+        if let Some(prev) = &self.prev_state {
+            for (&id, player) in &self.players {
+                if prev.players.get(&id) != Some(player) {
+                    diff.players.insert(id, player.clone());
+                }
+            }
+            for &id in prev.players.keys() {
+                if !self.players.contains_key(&id) {
+                    diff.removed_players.push(id);
+                }
+            }
+
+            for (&id, bullet) in &self.bullets {
+                if prev.bullets.get(&id) != Some(bullet) {
+                    diff.bullets.insert(id, bullet.clone());
+                }
+            }
+            for &id in prev.bullets.keys() {
+                if !self.bullets.contains_key(&id) {
+                    diff.removed_bullets.push(id);
+                }
+            }
+
+            for (&id, modifier) in &self.modifieres {
+                if prev.modifieres.get(&id) != Some(modifier) {
+                    diff.modifieres.insert(id, modifier.clone());
+                }
+            }
+            for &id in prev.modifieres.keys() {
+                if !self.modifieres.contains_key(&id) {
+                    diff.removed_modifieres.push(id);
+                }
+            }
+        } else {
+            diff.players = self.players.clone();
+            diff.bullets = self.bullets.clone();
+            diff.modifieres = self.modifieres.clone();
+        }
+
+        self.prev_state = Some(Box::new(self.clone()));
+        diff
     }
 
     pub fn create_player(&mut self, map: &Map) -> Player {

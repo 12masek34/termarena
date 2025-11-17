@@ -57,15 +57,15 @@ pub fn run_server(port: String) {
         let mut last_update = Instant::now();
         loop {
             let start = Instant::now();
-            let snapshot = {
+            let snapshot_diff = {
                 let mut game_state_lock = game_state_clone.lock().unwrap();
                 let now = Instant::now();
                 let delta_time = (now - last_update).as_secs_f32();
                 last_update = now;
                 game_state_lock.update(&map_clone, delta_time);
-                game_state_lock.get_snapshot()
+                game_state_lock.get_snapshot_diff()
             };
-            let _ = tx_clone.send(ServerMessage::GameState(snapshot));
+            let _ = tx_clone.send(ServerMessage::GameStateDiff(snapshot_diff));
             let elapsed = start.elapsed();
 
             if elapsed < tick_rate {
@@ -96,6 +96,14 @@ pub fn run_server(port: String) {
                     let _ = tx
                         .send(ServerMessage::InitPlayer(player))
                         .expect("failed to send to net thread");
+
+                    let snapshot = {
+                        let mut game_state_lock = game_state.lock().unwrap();
+                        game_state_lock.get_snapshot()
+                    };
+                    let _ = tx
+                        .send(ServerMessage::GameState(snapshot))
+                        .expect("failed to send to net thread");
                 }
                 ClientMessage::Map(chunk_ids) => {
                     let chunks = map.chunk_map();
@@ -113,7 +121,7 @@ pub fn run_server(port: String) {
                         game_state_lock.move_player(player_id, direction, &map);
                     }
                     let snapshot = {
-                        let game_state = game_state.lock().unwrap();
+                        let mut game_state = game_state.lock().unwrap();
                         game_state.get_snapshot()
                     };
                     let _ = tx
@@ -128,7 +136,7 @@ pub fn run_server(port: String) {
                         game_state_lock.shoot(player_id);
                     }
                     let snapshot = {
-                        let game_state = game_state.lock().unwrap();
+                        let mut game_state = game_state.lock().unwrap();
                         game_state.get_snapshot()
                     };
                     let _ = tx
@@ -145,7 +153,7 @@ pub fn run_server(port: String) {
                         clients_lock.remove(&src);
                     }
                     let snapshot = {
-                        let game_state = game_state.lock().unwrap();
+                        let mut game_state = game_state.lock().unwrap();
                         game_state.get_snapshot()
                     };
                     let _ = tx

@@ -87,6 +87,9 @@ async fn main() {
                     ServerMessage::GameState(state) => {
                         clinet_state_clone_lock.update_state(state);
                     }
+                    ServerMessage::GameStateDiff(state_diff) => {
+                        clinet_state_clone_lock.update_state_diff(state_diff);
+                    }
                 }
             }
         }
