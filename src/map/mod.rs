@@ -4,12 +4,24 @@ use ::rand::rngs::ThreadRng;
 use ::rand::thread_rng;
 use macroquad::prelude::*;
 use serde::{Deserialize, Serialize};
-use std::{collections::VecDeque, sync::Mutex};
+use std::{
+    collections::VecDeque,
+    sync::{Arc, Mutex},
+};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub enum Tile {
     Empty,
     Wall,
+}
+
+#[derive(Debug)]
+pub struct TextureChunk {
+    pub x: usize,
+    pub y: usize,
+    pub width: usize,
+    pub height: usize,
+    pub texture: Texture2D,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -20,7 +32,7 @@ pub struct Map {
 
     #[serde(skip)]
     #[serde(default)]
-    pub texture: Mutex<Option<Texture2D>>,
+    pub texture_chunks: Arc<Mutex<Option<Vec<TextureChunk>>>>,
 }
 
 impl Map {
@@ -49,7 +61,7 @@ impl Map {
             width,
             height,
             tiles,
-            texture: Mutex::new(None),
+            texture_chunks: Arc::new(Mutex::new(None)),
         }
     }
 
@@ -218,28 +230,47 @@ impl Map {
     }
 
     pub fn init_texture(&self) -> bool {
-        let mut texture_guard = self.texture.lock().unwrap();
-        if texture_guard.is_none() {
-            let mut image =
-                Image::gen_image_color(self.width as u16, self.height as u16, LIGHTGRAY);
+        const CHUNK_SIZE: usize = 256;
+        let mut chunks_guard = self.texture_chunks.lock().unwrap();
+        if chunks_guard.is_none() {
+            let chunks_x = (self.width + CHUNK_SIZE - 1) / CHUNK_SIZE;
+            let chunks_y = (self.height + CHUNK_SIZE - 1) / CHUNK_SIZE;
+            let mut result = Vec::new();
 
-            for y in 0..self.height {
-                for x in 0..self.width {
-                    let color = match self.tiles[y][x] {
-                        Tile::Empty => LIGHTGRAY,
-                        Tile::Wall => DARKBROWN,
-                    };
-                    image.set_pixel(x as u32, y as u32, color);
+            for cy in 0..chunks_y {
+                for cx in 0..chunks_x {
+                    let start_x = cx * CHUNK_SIZE;
+                    let start_y = cy * CHUNK_SIZE;
+                    let w = (self.width - start_x).min(CHUNK_SIZE);
+                    let h = (self.height - start_y).min(CHUNK_SIZE);
+
+                    let mut image = Image::gen_image_color(w as u16, h as u16, LIGHTGRAY);
+                    for y in 0..h {
+                        for x in 0..w {
+                            let color = match self.tiles[start_y + y][start_x + x] {
+                                Tile::Empty => LIGHTGRAY,
+                                Tile::Wall => DARKBROWN,
+                            };
+                            image.set_pixel(x as u32, y as u32, color);
+                        }
+                    }
+
+                    let texture = Texture2D::from_image(&image);
+                    texture.set_filter(FilterMode::Nearest);
+
+                    result.push(TextureChunk {
+                        x: start_x,
+                        y: start_y,
+                        width: w,
+                        height: h,
+                        texture,
+                    });
                 }
             }
 
-            let texture = Texture2D::from_image(&image);
-            texture.set_filter(FilterMode::Nearest);
-
-            *texture_guard = Some(texture);
-            return true;
+            *chunks_guard = Some(result);
         }
-        return false;
+        return true;
     }
 
     pub fn render(&self, player_pos: (f32, f32)) {
@@ -269,39 +300,60 @@ impl Map {
     pub fn render_texture(&self, player_pos: (f32, f32)) {
         let screen_center_x = screen_width() / 2.0;
         let screen_center_y = screen_height() / 2.0;
-
         let tiles_in_x = (screen_width() / TILE_SIZE).ceil() as usize;
         let tiles_in_y = (screen_height() / TILE_SIZE).ceil() as usize;
-
         let start_x = (player_pos.0 as isize - (tiles_in_x / 2) as isize).max(0) as usize;
         let start_y = (player_pos.1 as isize - (tiles_in_y / 2) as isize).max(0) as usize;
         let end_x = (start_x + tiles_in_x).min(self.width);
         let end_y = (start_y + tiles_in_y).min(self.height);
-
         let offset_x = screen_center_x - (player_pos.0 - start_x as f32) * TILE_SIZE;
         let offset_y = screen_center_y - (player_pos.1 - start_y as f32) * TILE_SIZE;
 
-        let texture_lock = self.texture.lock().unwrap();
-        if let Some(texture) = &*texture_lock {
-            draw_texture_ex(
-                texture,
-                offset_x,
-                offset_y,
-                LIGHTGRAY,
-                DrawTextureParams {
-                    source: Some(Rect {
-                        x: start_x as f32,
-                        y: start_y as f32,
-                        w: (end_x - start_x) as f32,
-                        h: (end_y - start_y) as f32,
-                    }),
-                    dest_size: Some(vec2(
-                        (end_x - start_x) as f32 * TILE_SIZE,
-                        (end_y - start_y) as f32 * TILE_SIZE,
-                    )),
-                    ..Default::default()
-                },
-            );
+        let chunks_guard = self.texture_chunks.lock().unwrap();
+        if let Some(chunks) = &*chunks_guard {
+            for chunk in chunks {
+                if chunk.x + chunk.width < start_x
+                    || chunk.x > end_x
+                    || chunk.y + chunk.height < start_y
+                    || chunk.y > end_y
+                {
+                    continue;
+                }
+
+                let src_x = if start_x > chunk.x {
+                    (start_x - chunk.x) as f32
+                } else {
+                    0.0
+                };
+                let src_y = if start_y > chunk.y {
+                    (start_y - chunk.y) as f32
+                } else {
+                    0.0
+                };
+                let src_w =
+                    ((end_x.min(chunk.x + chunk.width) - (start_x.max(chunk.x))) as f32).max(0.0);
+                let src_h =
+                    ((end_y.min(chunk.y + chunk.height) - (start_y.max(chunk.y))) as f32).max(0.0);
+                let dest_x = offset_x + ((chunk.x.max(start_x) - start_x) as f32 * TILE_SIZE);
+                let dest_y = offset_y + ((chunk.y.max(start_y) - start_y) as f32 * TILE_SIZE);
+
+                draw_texture_ex(
+                    &chunk.texture,
+                    dest_x,
+                    dest_y,
+                    LIGHTGRAY,
+                    DrawTextureParams {
+                        source: Some(Rect {
+                            x: src_x,
+                            y: src_y,
+                            w: src_w,
+                            h: src_h,
+                        }),
+                        dest_size: Some(vec2(src_w * TILE_SIZE, src_h * TILE_SIZE)),
+                        ..Default::default()
+                    },
+                );
+            }
         }
     }
 }

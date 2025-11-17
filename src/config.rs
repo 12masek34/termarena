@@ -2,8 +2,8 @@ use std::time::Duration;
 
 pub const PLAYER_RADIUS: f32 = 1.0; // в тайлах
 pub const TILE_SIZE: f32 = 10.0;
-pub const MAP_WIDTH: usize = 100;
-pub const MAP_HEIGHT: usize = 100;
+pub const MAP_WIDTH: usize = 1000;
+pub const MAP_HEIGHT: usize = 1000;
 pub const PLAYER_HEALTH: u32 = 3;
 pub const WALK_SPEED: f32 = 5.0;
 pub const BULLET_SPEED: f32 = 7.0;
