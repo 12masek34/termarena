@@ -162,14 +162,14 @@ pub fn run_server(port: String) {
                         let mut game_state_lock = game_state.lock().unwrap();
                         game_state_lock.shoot(player_id.as_ref());
                     }
-                    let snapshot = {
+                    let snapshot_diff = {
                         let mut game_state = game_state.lock().unwrap();
-                        game_state.get_snapshot(player_id.as_ref())
+                        game_state.get_snapshot_diff(player_id.as_ref())
                     };
                     let _ = tx
                         .send(ServerMessage {
                             src: src,
-                            message: ServerMessageType::GameState(snapshot),
+                            message: ServerMessageType::GameStateDiff(snapshot_diff),
                         })
                         .expect("failed to send to net thread");
                 }
