@@ -30,7 +30,8 @@ impl ClientState {
         }
     }
 
-    pub fn update_state(&mut self, state: GameState) {
+    pub fn update_state(&mut self, mut state: GameState) {
+        state.interpolate();
         self.game_state = Some(Arc::new(state));
     }
 

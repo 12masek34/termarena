@@ -98,12 +98,7 @@ impl GameState {
 
     pub fn get_snapshot(&mut self, player_id: Option<&u32>) -> Self {
         if let Some(pid) = player_id {
-            if let Some(player) = self.players.get(pid) {
-                let half_w = 30.0; // TODO: реальные размеры экрана
-                let half_h = 20.0;
-                let px = player.x;
-                let py = player.y;
-
+            if let Some((px, py, half_w, half_h, _)) = self.resolve_viewport(pid) {
                 let mut player_prev = PlayerPrevState {
                     players: HashMap::new(),
                     bullets: HashMap::new(),
@@ -167,8 +162,8 @@ impl GameState {
 
     pub fn resolve_viewport(&self, pid: &u32) -> Option<(f32, f32, f32, f32, u32)> {
         self.players.get(pid).map(|player| {
-            let half_w = 30.0;
-            let half_h = 20.0;
+            let half_w = 50.0;
+            let half_h = 50.0;
             (player.x, player.y, half_w, half_h, *pid)
         })
     }
@@ -309,26 +304,7 @@ impl GameState {
     pub fn create_player(&mut self, map: &Map) -> Player {
         let id = self.next_id();
         let (x, y) = map.generate_spawn_position(config::PLAYER_RADIUS);
-        let player = Player {
-            id,
-            x,
-            y,
-            kills: 0,
-            deths: 0,
-            radius: config::PLAYER_RADIUS,
-            direction: Direction::Up,
-            last_shot: Instant::now() - Duration::from_secs(5),
-            fire_rate: config::FIRE_RATE,
-            bullet_speed: config::BULLET_SPEED,
-            bullet_range: config::BULLET_RANGE,
-            bullet_damage: config::BULLET_DAMAGE,
-            health: config::PLAYER_HEALTH,
-            max_health: config::PLAYER_HEALTH,
-            hit_radius: config::HIT_RADIUS,
-            is_moving: false,
-            move_target: None,
-            walk_speed: config::WALK_SPEED,
-        };
+        let player = Player::new(id, x, y);
         self.players.insert(id, player.clone());
 
         player
@@ -385,6 +361,8 @@ impl GameState {
                     owner_id: *id,
                     x: player.x,
                     y: player.y,
+                    render_x: player.x,
+                    render_y: player.y,
                     dx,
                     dy,
                     speed: player.bullet_speed,
@@ -570,8 +548,9 @@ impl GameState {
                 continue;
             }
 
-            let dx = player.x - player_pos.0;
-            let dy = player.y - player_pos.1;
+            let dx = player.render_x - player_pos.0;
+            let dy = player.render_y - player_pos.1;
+
             let screen_x = screen_width() / 2.0 + dx * config::TILE_SIZE;
             let screen_y = screen_height() / 2.0 + dy * config::TILE_SIZE;
 
@@ -679,5 +658,23 @@ impl GameState {
         let dx = (ox - px).abs();
         let dy = (oy - py).abs();
         dx <= half_w && dy <= half_h
+    }
+
+    pub fn interpolate(&mut self) {
+        let factor = 0.05;
+
+        fn smooth(v: &mut f32, target: f32, f: f32) {
+            *v += (target - *v) * f;
+        }
+
+        for p in self.players.values_mut() {
+            smooth(&mut p.render_x, p.x, factor);
+            smooth(&mut p.render_y, p.y, factor);
+        }
+
+        for b in self.bullets.values_mut() {
+            smooth(&mut b.render_x, b.x, factor);
+            smooth(&mut b.render_y, b.y, factor);
+        }
     }
 }

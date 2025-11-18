@@ -28,9 +28,38 @@ pub struct Player {
 
     #[serde(skip, default = "Player::default_last_shot")]
     pub last_shot: Instant,
+    #[serde(skip)]
+    pub render_x: f32,
+    #[serde(skip)]
+    pub render_y: f32,
 }
 
 impl Player {
+    pub fn new(id: u32, x: f32, y: f32) -> Self {
+        Self {
+            id,
+            x,
+            y,
+            render_x: x,
+            render_y: y,
+            kills: 0,
+            deths: 0,
+            radius: config::PLAYER_RADIUS,
+            direction: Direction::Up,
+            last_shot: Instant::now() - Duration::from_secs(5),
+            fire_rate: config::FIRE_RATE,
+            bullet_speed: config::BULLET_SPEED,
+            bullet_range: config::BULLET_RANGE,
+            bullet_damage: config::BULLET_DAMAGE,
+            health: config::PLAYER_HEALTH,
+            max_health: config::PLAYER_HEALTH,
+            hit_radius: config::HIT_RADIUS,
+            is_moving: false,
+            move_target: None,
+            walk_speed: config::WALK_SPEED,
+        }
+    }
+
     fn default_last_shot() -> Instant {
         Instant::now() - Duration::from_secs(5)
     }

@@ -16,6 +16,10 @@ pub struct Bullet {
     pub traveled: f32,
     pub damage: u32,
     pub hit_radius: f32,
+    #[serde(skip)]
+    pub render_x: f32,
+    #[serde(skip)]
+    pub render_y: f32,
 }
 
 impl Bullet {

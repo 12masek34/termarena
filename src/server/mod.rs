@@ -54,19 +54,18 @@ pub fn run_server(port: String) {
     let map_clone = Arc::clone(&map);
     let tx_clone = tx.clone();
     thread::spawn(move || {
-        let tick_rate = Duration::from_millis(30);
+        let tick_rate = Duration::from_millis(16);
         let mut last_update = Instant::now();
         loop {
-            let start = Instant::now();
+            let tick_start = Instant::now();
+            let delta_time = (tick_start - last_update).as_secs_f32();
+            last_update = tick_start;
             let clients_snapshot = {
                 let clients_guard = clients_clone_gs.lock().unwrap();
                 clients_guard.clone()
             };
             {
                 let mut game_state_lock = game_state_clone.lock().unwrap();
-                let now = Instant::now();
-                let delta_time = (now - last_update).as_secs_f32();
-                last_update = now;
                 game_state_lock.update(&map_clone, delta_time);
 
                 for (&src, player_id) in &clients_snapshot {
@@ -79,11 +78,8 @@ pub fn run_server(port: String) {
                         .expect("failed to send to net thread");
                 }
             }
-            let elapsed = start.elapsed();
-
-            if elapsed < tick_rate {
-                thread::sleep(tick_rate - elapsed);
-            }
+            let sleep_duration = tick_rate.saturating_sub(tick_start.elapsed());
+            thread::sleep(sleep_duration);
         }
     });
 
