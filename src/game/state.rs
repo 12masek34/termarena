@@ -32,7 +32,7 @@ pub struct GameState {
     pub last_spawn_modifieres: Instant,
 
     #[serde(skip_serializing, skip_deserializing, default)]
-    pub prev_state: Option<Box<GameState>>,
+    pub prev_states: HashMap<u32, Box<PlayerPrevState>>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -45,6 +45,13 @@ pub struct GameStateDiff {
     pub removed_modifieres: Vec<u32>,
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct PlayerPrevState {
+    players: HashMap<u32, Player>,
+    bullets: HashMap<u32, Bullet>,
+    modifieres: HashMap<u32, Modifier>,
+}
+
 impl GameState {
     pub fn new() -> Self {
         Self {
@@ -52,7 +59,7 @@ impl GameState {
             bullets: HashMap::new(),
             modifieres: HashMap::new(),
             last_spawn_modifieres: Instant::now(),
-            prev_state: None,
+            prev_states: HashMap::new(),
         }
     }
 
@@ -66,13 +73,45 @@ impl GameState {
         }
     }
 
-    pub fn get_snapshot(&mut self) -> Self {
-        let snapshot = self.clone();
-        self.prev_state = Some(Box::new(snapshot.clone()));
-        snapshot
+    pub fn get_snapshot(&mut self, player_id: Option<&u32>) -> Self {
+        if let Some(pid) = player_id {
+            if let Some(player) = self.players.get(pid) {
+                let half_w = 30.0; // TODO: реальные размеры экрана
+                let half_h = 20.0;
+                let px = player.x;
+                let py = player.y;
+
+                let mut player_prev = PlayerPrevState {
+                    players: HashMap::new(),
+                    bullets: HashMap::new(),
+                    modifieres: HashMap::new(),
+                };
+
+                for (&id, p) in &self.players {
+                    if self.is_in_viewport(px, py, p.x, p.y, half_w, half_h) {
+                        player_prev.players.insert(id, p.clone());
+                    }
+                }
+                for (&id, b) in &self.bullets {
+                    if self.is_in_viewport(px, py, b.x, b.y, half_w, half_h) {
+                        player_prev.bullets.insert(id, b.clone());
+                    }
+                }
+                for (&id, m) in &self.modifieres {
+                    if self.is_in_viewport(px, py, m.x, m.y, half_w, half_h) {
+                        player_prev.modifieres.insert(id, m.clone());
+                    }
+                }
+                self.prev_states.insert(*pid, Box::new(player_prev));
+
+                return self.clone();
+            }
+        }
+
+        self.clone()
     }
 
-    pub fn get_snapshot_diff(&mut self) -> GameStateDiff {
+    pub fn get_snapshot_diff(&mut self, player_id: Option<&u32>) -> GameStateDiff {
         let mut diff = GameStateDiff {
             players: HashMap::new(),
             removed_players: vec![],
@@ -82,46 +121,112 @@ impl GameState {
             removed_modifieres: vec![],
         };
 
-        if let Some(prev) = &self.prev_state {
-            for (&id, player) in &self.players {
-                if prev.players.get(&id) != Some(player) {
-                    diff.players.insert(id, player.clone());
-                }
-            }
-            for &id in prev.players.keys() {
-                if !self.players.contains_key(&id) {
-                    diff.removed_players.push(id);
-                }
-            }
-
-            for (&id, bullet) in &self.bullets {
-                if prev.bullets.get(&id) != Some(bullet) {
-                    diff.bullets.insert(id, bullet.clone());
-                }
-            }
-            for &id in prev.bullets.keys() {
-                if !self.bullets.contains_key(&id) {
-                    diff.removed_bullets.push(id);
-                }
-            }
-
-            for (&id, modifier) in &self.modifieres {
-                if prev.modifieres.get(&id) != Some(modifier) {
-                    diff.modifieres.insert(id, modifier.clone());
-                }
-            }
-            for &id in prev.modifieres.keys() {
-                if !self.modifieres.contains_key(&id) {
-                    diff.removed_modifieres.push(id);
-                }
+        let (px, py, half_w, half_h, pid) = if let Some(pid) = player_id {
+            if let Some(player) = self.players.get(pid) {
+                let half_w = 30.0; // TODO: использовать реальные размеры экрана
+                let half_h = 20.0;
+                (player.x, player.y, half_w, half_h, *pid)
+            } else {
+                return diff;
             }
         } else {
             diff.players = self.players.clone();
             diff.bullets = self.bullets.clone();
             diff.modifieres = self.modifieres.clone();
+            return diff;
+        };
+
+        let prev = self.prev_states.get(&pid);
+
+        for (&id, player) in &self.players {
+            if self.is_in_viewport(px, py, player.x, player.y, half_w, half_h) {
+                let changed = prev.map_or(true, |p| p.players.get(&id) != Some(player));
+                if changed {
+                    diff.players.insert(id, player.clone());
+                }
+            }
+        }
+        if let Some(prev_state) = prev {
+            for (&id, _) in &prev_state.players {
+                let removed = !self.players.contains_key(&id)
+                    || !self
+                        .players
+                        .get(&id)
+                        .map(|p| self.is_in_viewport(px, py, p.x, p.y, half_w, half_h))
+                        .unwrap_or(false);
+                if removed {
+                    diff.removed_players.push(id);
+                }
+            }
         }
 
-        self.prev_state = Some(Box::new(self.clone()));
+        for (&id, bullet) in &self.bullets {
+            if self.is_in_viewport(px, py, bullet.x, bullet.y, half_w, half_h) {
+                let changed = prev.map_or(true, |p| p.bullets.get(&id) != Some(bullet));
+                if changed {
+                    diff.bullets.insert(id, bullet.clone());
+                }
+            }
+        }
+        if let Some(prev_state) = prev {
+            for (&id, _) in &prev_state.bullets {
+                let removed = !self.bullets.contains_key(&id)
+                    || !self
+                        .bullets
+                        .get(&id)
+                        .map(|b| self.is_in_viewport(px, py, b.x, b.y, half_w, half_h))
+                        .unwrap_or(false);
+                if removed {
+                    diff.removed_bullets.push(id);
+                }
+            }
+        }
+
+        for (&id, modifier) in &self.modifieres {
+            if self.is_in_viewport(px, py, modifier.x, modifier.y, half_w, half_h) {
+                let changed = prev.map_or(true, |p| p.modifieres.get(&id) != Some(modifier));
+                if changed {
+                    diff.modifieres.insert(id, modifier.clone());
+                }
+            }
+        }
+        if let Some(prev_state) = prev {
+            for (&id, _) in &prev_state.modifieres {
+                let removed = !self.modifieres.contains_key(&id)
+                    || !self
+                        .modifieres
+                        .get(&id)
+                        .map(|m| self.is_in_viewport(px, py, m.x, m.y, half_w, half_h))
+                        .unwrap_or(false);
+                if removed {
+                    diff.removed_modifieres.push(id);
+                }
+            }
+        }
+
+        let mut new_prev_state = PlayerPrevState {
+            players: HashMap::new(),
+            bullets: HashMap::new(),
+            modifieres: HashMap::new(),
+        };
+
+        for (&id, player) in &self.players {
+            if self.is_in_viewport(px, py, player.x, player.y, half_w, half_h) {
+                new_prev_state.players.insert(id, player.clone());
+            }
+        }
+        for (&id, bullet) in &self.bullets {
+            if self.is_in_viewport(px, py, bullet.x, bullet.y, half_w, half_h) {
+                new_prev_state.bullets.insert(id, bullet.clone());
+            }
+        }
+        for (&id, modifier) in &self.modifieres {
+            if self.is_in_viewport(px, py, modifier.x, modifier.y, half_w, half_h) {
+                new_prev_state.modifieres.insert(id, modifier.clone());
+            }
+        }
+        self.prev_states.insert(pid, Box::new(new_prev_state));
+
         diff
     }
 
@@ -484,5 +589,19 @@ impl GameState {
             );
             y += 25.0;
         }
+    }
+
+    pub fn is_in_viewport(
+        &self,
+        px: f32,
+        py: f32,
+        ox: f32,
+        oy: f32,
+        half_w: f32,
+        half_h: f32,
+    ) -> bool {
+        let dx = (ox - px).abs();
+        let dy = (oy - py).abs();
+        dx <= half_w && dy <= half_h
     }
 }

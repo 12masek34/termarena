@@ -69,8 +69,8 @@ pub fn run_server(port: String) {
                 last_update = now;
                 game_state_lock.update(&map_clone, delta_time);
 
-                for (&src, _player_id) in &clients_snapshot {
-                    let snapshot_diff = game_state_lock.get_snapshot_diff();
+                for (&src, player_id) in &clients_snapshot {
+                    let snapshot_diff = game_state_lock.get_snapshot_diff(Some(player_id));
                     let _ = tx_clone
                         .send(ServerMessage {
                             src: src,
@@ -101,6 +101,7 @@ pub fn run_server(port: String) {
                 ClientMessage::Init => {
                     println!("Player init");
                     let player = game_state.lock().unwrap().create_player(&map);
+                    let player_id = player.id;
 
                     {
                         let mut clients_lock = clients.lock().unwrap();
@@ -115,7 +116,7 @@ pub fn run_server(port: String) {
 
                     let snapshot = {
                         let mut game_state_lock = game_state.lock().unwrap();
-                        game_state_lock.get_snapshot()
+                        game_state_lock.get_snapshot(Some(&player_id))
                     };
                     let _ = tx
                         .send(ServerMessage {
@@ -137,15 +138,17 @@ pub fn run_server(port: String) {
                     }
                 }
                 ClientMessage::Move(direction) => {
-                    {
+                    let player_id: Option<u32> = {
                         let clients_lock = clients.lock().unwrap();
-                        let player_id = clients_lock.get(&src);
+                        clients_lock.get(&src).copied()
+                    };
+                    {
                         let mut game_state_lock = game_state.lock().unwrap();
-                        game_state_lock.move_player(player_id, direction, &map);
+                        game_state_lock.move_player(player_id.as_ref(), direction, &map);
                     }
                     let snapshot_diff = {
-                        let mut game_state = game_state.lock().unwrap();
-                        game_state.get_snapshot_diff()
+                        let mut game_state_lock = game_state.lock().unwrap();
+                        game_state_lock.get_snapshot_diff(player_id.as_ref())
                     };
                     let _ = tx
                         .send(ServerMessage {
@@ -155,15 +158,17 @@ pub fn run_server(port: String) {
                         .expect("failed to send to net thread");
                 }
                 ClientMessage::Shoot => {
-                    {
+                    let player_id: Option<u32> = {
                         let clients_lock = clients.lock().unwrap();
-                        let player_id = clients_lock.get(&src);
+                        clients_lock.get(&src).copied()
+                    };
+                    {
                         let mut game_state_lock = game_state.lock().unwrap();
-                        game_state_lock.shoot(player_id);
+                        game_state_lock.shoot(player_id.as_ref());
                     }
                     let snapshot = {
                         let mut game_state = game_state.lock().unwrap();
-                        game_state.get_snapshot()
+                        game_state.get_snapshot(player_id.as_ref())
                     };
                     let _ = tx
                         .send(ServerMessage {
@@ -174,16 +179,17 @@ pub fn run_server(port: String) {
                 }
                 ClientMessage::Quit => {
                     println!("Player disconnected {}", src);
+                    let player_id: Option<u32> = {
+                        let clients_lock = clients.lock().unwrap();
+                        clients_lock.get(&src).copied()
+                    };
                     {
-                        let mut clients_lock = clients.lock().unwrap();
-                        let player_id = clients_lock.get(&src);
                         let mut game_state_lock = game_state.lock().unwrap();
-                        game_state_lock.remove(player_id);
-                        clients_lock.remove(&src);
+                        game_state_lock.remove(player_id.as_ref());
                     }
                     let snapshot = {
                         let mut game_state = game_state.lock().unwrap();
-                        game_state.get_snapshot()
+                        game_state.get_snapshot(player_id.as_ref())
                     };
                     let _ = tx
                         .send(ServerMessage {
