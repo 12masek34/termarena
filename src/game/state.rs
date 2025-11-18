@@ -139,11 +139,9 @@ impl GameState {
         let prev = self.prev_states.get(&pid);
 
         for (&id, player) in &self.players {
-            if self.is_in_viewport(px, py, player.x, player.y, half_w, half_h) {
-                let changed = prev.map_or(true, |p| p.players.get(&id) != Some(player));
-                if changed {
-                    diff.players.insert(id, player.clone());
-                }
+            let changed = prev.map_or(true, |p| p.players.get(&id) != Some(player));
+            if changed {
+                diff.players.insert(id, player.clone());
             }
         }
         if let Some(prev_state) = prev {
