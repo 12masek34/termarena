@@ -192,12 +192,12 @@ impl GameState {
         }
         if let Some(prev_state) = prev {
             for (&id, _) in &prev_state.modifieres {
-                let removed = !self.modifieres.contains_key(&id)
-                    || !self
-                        .modifieres
-                        .get(&id)
-                        .map(|m| self.is_in_viewport(px, py, m.x, m.y, half_w, half_h))
-                        .unwrap_or(false);
+                let removed = prev_state.modifieres.contains_key(&id)
+                    && (!self.modifieres.contains_key(&id)
+                        || !self.is_in_viewport(px, py,
+                            self.modifieres.get(&id).map(|m| m.x).unwrap_or(0.0),
+                            self.modifieres.get(&id).map(|m| m.y).unwrap_or(0.0),
+                            half_w, half_h));
                 if removed {
                     diff.removed_modifieres.push(id);
                 }
