@@ -9,7 +9,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-use crate::config;
+use crate::{config, network::state::ServerMessageType};
 use crate::{
     game::state::GameState,
     map::Map,
@@ -50,6 +50,7 @@ pub fn run_server(port: String) {
     });
 
     let game_state_clone = Arc::clone(&game_state);
+    let clients_clone_gs = Arc::clone(&clients);
     let map_clone = Arc::clone(&map);
     let tx_clone = tx.clone();
     thread::spawn(move || {
@@ -57,15 +58,27 @@ pub fn run_server(port: String) {
         let mut last_update = Instant::now();
         loop {
             let start = Instant::now();
-            let snapshot_diff = {
+            let clients_snapshot = {
+                let clients_guard = clients_clone_gs.lock().unwrap();
+                clients_guard.clone()
+            };
+            {
                 let mut game_state_lock = game_state_clone.lock().unwrap();
                 let now = Instant::now();
                 let delta_time = (now - last_update).as_secs_f32();
                 last_update = now;
                 game_state_lock.update(&map_clone, delta_time);
-                game_state_lock.get_snapshot_diff()
-            };
-            let _ = tx_clone.send(ServerMessage::GameStateDiff(snapshot_diff));
+
+                for (&src, _player_id) in &clients_snapshot {
+                    let snapshot_diff = game_state_lock.get_snapshot_diff();
+                    let _ = tx_clone
+                        .send(ServerMessage {
+                            src: src,
+                            message: ServerMessageType::GameStateDiff(snapshot_diff),
+                        })
+                        .expect("failed to send to net thread");
+                }
+            }
             let elapsed = start.elapsed();
 
             if elapsed < tick_rate {
@@ -94,7 +107,10 @@ pub fn run_server(port: String) {
                         clients_lock.insert(src, player.id);
                     }
                     let _ = tx
-                        .send(ServerMessage::InitPlayer(player))
+                        .send(ServerMessage {
+                            src: src,
+                            message: ServerMessageType::InitPlayer(player),
+                        })
                         .expect("failed to send to net thread");
 
                     let snapshot = {
@@ -102,14 +118,21 @@ pub fn run_server(port: String) {
                         game_state_lock.get_snapshot()
                     };
                     let _ = tx
-                        .send(ServerMessage::GameState(snapshot))
+                        .send(ServerMessage {
+                            src: src,
+                            message: ServerMessageType::GameState(snapshot),
+                        })
                         .expect("failed to send to net thread");
                 }
                 ClientMessage::Map(chunk_ids) => {
                     let chunks = map.chunk_map();
                     for chunk in chunks {
                         if !chunk_ids.contains(&chunk.chunk_index) {
-                            tx.send(ServerMessage::Map(chunk)).unwrap();
+                            tx.send(ServerMessage {
+                                src: src,
+                                message: ServerMessageType::Map(chunk),
+                            })
+                            .expect("failed to send to net thread");
                         }
                     }
                 }
@@ -125,7 +148,10 @@ pub fn run_server(port: String) {
                         game_state.get_snapshot_diff()
                     };
                     let _ = tx
-                        .send(ServerMessage::GameStateDiff(snapshot_diff))
+                        .send(ServerMessage {
+                            src: src,
+                            message: ServerMessageType::GameStateDiff(snapshot_diff),
+                        })
                         .expect("failed to send to net thread");
                 }
                 ClientMessage::Shoot => {
@@ -140,7 +166,10 @@ pub fn run_server(port: String) {
                         game_state.get_snapshot()
                     };
                     let _ = tx
-                        .send(ServerMessage::GameState(snapshot))
+                        .send(ServerMessage {
+                            src: src,
+                            message: ServerMessageType::GameState(snapshot),
+                        })
                         .expect("failed to send to net thread");
                 }
                 ClientMessage::Quit => {
@@ -157,7 +186,10 @@ pub fn run_server(port: String) {
                         game_state.get_snapshot()
                     };
                     let _ = tx
-                        .send(ServerMessage::GameState(snapshot))
+                        .send(ServerMessage {
+                            src: src,
+                            message: ServerMessageType::GameState(snapshot),
+                        })
                         .expect("failed to send to net thread");
                 }
             }

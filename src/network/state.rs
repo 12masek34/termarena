@@ -1,4 +1,7 @@
-use std::collections::{HashMap, HashSet};
+use std::{
+    collections::{HashMap, HashSet},
+    net::SocketAddr,
+};
 
 use serde::{Deserialize, Serialize};
 
@@ -11,7 +14,13 @@ use crate::{
 };
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
-pub enum ServerMessage {
+pub struct ServerMessage {
+    pub src: SocketAddr,
+    pub message: ServerMessageType,
+}
+
+#[derive(Clone, Serialize, Deserialize, Debug)]
+pub enum ServerMessageType {
     InitPlayer(Player),
     Map(MapChunk),
     GameState(GameState),

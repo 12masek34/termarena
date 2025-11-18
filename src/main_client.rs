@@ -16,6 +16,7 @@ use termarena::config;
 use termarena::map::Map;
 use termarena::network::recv_message;
 use termarena::network::state::ServerMessage;
+use termarena::network::state::ServerMessageType;
 use termarena::network::{send_message, state::ClientMessage, state::MapDownloader};
 use termarena::ui::loading;
 
@@ -76,20 +77,22 @@ async fn main() {
             if let Some((msg, _addr)) = recv_message::<ServerMessage>(&socket_clone_recv) {
                 let mut clinet_state_clone_lock = client_state_clone.lock().unwrap();
                 match msg {
-                    ServerMessage::InitPlayer(player) => {
-                        clinet_state_clone_lock.init_player(player);
-                    }
-                    ServerMessage::Map(chunk) => {
-                        let mut map_downloader_lock = map_downloader_recv.lock().unwrap();
-                        map_loaded_clone
-                            .store(map_downloader_lock.load_chunk(chunk), Ordering::Relaxed);
-                    }
-                    ServerMessage::GameState(state) => {
-                        clinet_state_clone_lock.update_state(state);
-                    }
-                    ServerMessage::GameStateDiff(state_diff) => {
-                        clinet_state_clone_lock.update_state_diff(state_diff);
-                    }
+                    ServerMessage { src: _, message } => match message {
+                        ServerMessageType::InitPlayer(player) => {
+                            clinet_state_clone_lock.init_player(player);
+                        }
+                        ServerMessageType::Map(chunk) => {
+                            let mut map_downloader_lock = map_downloader_recv.lock().unwrap();
+                            map_loaded_clone
+                                .store(map_downloader_lock.load_chunk(chunk), Ordering::Relaxed);
+                        }
+                        ServerMessageType::GameState(state) => {
+                            clinet_state_clone_lock.update_state(state);
+                        }
+                        ServerMessageType::GameStateDiff(state_diff) => {
+                            clinet_state_clone_lock.update_state_diff(state_diff);
+                        }
+                    },
                 }
             }
         }
