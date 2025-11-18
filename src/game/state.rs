@@ -662,19 +662,24 @@ impl GameState {
 
     pub fn interpolate(&mut self) {
         let factor = 0.05;
+        let teleport_threshold = config::TILE_SIZE * 2.0;
 
-        fn smooth(v: &mut f32, target: f32, f: f32) {
-            *v += (target - *v) * f;
+        fn smooth(v: &mut f32, target: f32, f: f32, threshold: f32) {
+            if (*v - target).abs() > threshold {
+                *v = target;
+            } else {
+                *v += (target - *v) * f;
+            }
         }
 
         for p in self.players.values_mut() {
-            smooth(&mut p.render_x, p.x, factor);
-            smooth(&mut p.render_y, p.y, factor);
+            smooth(&mut p.render_x, p.x, factor, teleport_threshold);
+            smooth(&mut p.render_y, p.y, factor, teleport_threshold);
         }
 
         for b in self.bullets.values_mut() {
-            smooth(&mut b.render_x, b.x, factor);
-            smooth(&mut b.render_y, b.y, factor);
+            smooth(&mut b.render_x, b.x, factor, teleport_threshold);
+            smooth(&mut b.render_y, b.y, factor, teleport_threshold);
         }
     }
 }
