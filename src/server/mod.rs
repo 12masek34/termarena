@@ -35,17 +35,10 @@ pub fn run_server(port: String) {
 
     let (tx, rx) = mpsc::channel::<ServerMessage>();
 
-    let clients_clone = Arc::clone(&clients);
     let socket_clone = socket.try_clone().unwrap();
     thread::spawn(move || {
         for msg in rx {
-            let clients_snapshot = {
-                let clients_guard = clients_clone.lock().unwrap();
-                clients_guard.clone()
-            };
-            for (&client, _) in &clients_snapshot {
-                let _ = send_message(&socket_clone, &msg, client);
-            }
+            let _ = send_message(&socket_clone, &msg, msg.src);
         }
     });
 
