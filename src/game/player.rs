@@ -25,13 +25,10 @@ pub struct Player {
     pub is_moving: bool,
     pub move_target: Option<(f32, f32)>,
     pub walk_speed: f32,
+    pub to_render: bool,
 
     #[serde(skip, default = "Player::default_last_shot")]
     pub last_shot: Instant,
-    #[serde(skip)]
-    pub render_x: f32,
-    #[serde(skip)]
-    pub render_y: f32,
 }
 
 impl Player {
@@ -40,8 +37,6 @@ impl Player {
             id,
             x,
             y,
-            render_x: x,
-            render_y: y,
             kills: 0,
             deths: 0,
             radius: config::PLAYER_RADIUS,
@@ -57,6 +52,7 @@ impl Player {
             is_moving: false,
             move_target: None,
             walk_speed: config::WALK_SPEED,
+            to_render: true,
         }
     }
 
@@ -79,6 +75,9 @@ impl Player {
     }
 
     pub fn render(&self, current_id: Option<u32>, offset_x: f32, offset_y: f32) {
+        if !self.to_render {
+            return;
+        }
         let draw_x = self.x * config::TILE_SIZE + offset_x;
         let draw_y = self.y * config::TILE_SIZE + offset_y;
 

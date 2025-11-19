@@ -154,7 +154,7 @@ impl GameState {
         self.collect_bullet_changes(&mut diff, px, py, half_w, half_h, prev);
         self.collect_modifier_changes(&mut diff, px, py, half_w, half_h, prev);
 
-        let new_prev = self.build_new_prev_state(px, py, half_w, half_h);
+        let new_prev = self.build_new_prev_state(px, py, half_w, half_h, *player_id.unwrap());
         self.prev_states.insert(pid, Box::new(new_prev));
 
         diff
@@ -171,30 +171,45 @@ impl GameState {
     pub fn collect_player_changes(
         &self,
         diff: &mut GameStateDiff,
-        _pid: u32,
+        pid: u32,
         px: f32,
         py: f32,
         half_w: f32,
         half_h: f32,
         prev: Option<&Box<PlayerPrevState>>,
     ) {
-        for (&id, player) in &self.players {
-            let changed = prev.map_or(true, |p| p.players.get(&id) != Some(player));
+        if let Some(local_player) = self.players.get(&pid) {
+            let changed = prev.map_or(true, |p| p.players.get(&pid) != Some(local_player));
             if changed {
-                diff.players.insert(id, player.clone());
+                diff.players.insert(pid, local_player.clone());
+            }
+        }
+
+        for (&id, player) in &self.players {
+            if id == pid {
+                continue;
+            }
+            if self.is_in_viewport(px, py, player.x, player.y, half_w, half_h) {
+                let changed = prev.map_or(true, |p| p.players.get(&id) != Some(player));
+                if changed {
+                    diff.players.insert(id, player.clone());
+                }
             }
         }
 
         if let Some(prev_state) = prev {
             for (&id, _) in &prev_state.players {
-                let removed = !self.players.contains_key(&id)
-                    || !self
-                        .players
-                        .get(&id)
-                        .map(|p| self.is_in_viewport(px, py, p.x, p.y, half_w, half_h))
-                        .unwrap_or(false);
+                if id == pid {
+                    continue;
+                }
 
-                if removed {
+                let still_exists = self
+                    .players
+                    .get(&id)
+                    .map(|p| self.is_in_viewport(px, py, p.x, p.y, half_w, half_h))
+                    .unwrap_or(false);
+
+                if !still_exists {
                     diff.removed_players.push(id);
                 }
             }
@@ -279,11 +294,12 @@ impl GameState {
         py: f32,
         half_w: f32,
         half_h: f32,
+        player_id: u32,
     ) -> PlayerPrevState {
         let mut new_prev = PlayerPrevState::new();
 
         for (&id, player) in &self.players {
-            if self.is_in_viewport(px, py, player.x, player.y, half_w, half_h) {
+            if id == player_id || self.is_in_viewport(px, py, player.x, player.y, half_w, half_h) {
                 new_prev.players.insert(id, player.clone());
             }
         }
@@ -548,8 +564,8 @@ impl GameState {
                 continue;
             }
 
-            let dx = player.render_x - player_pos.0;
-            let dy = player.render_y - player_pos.1;
+            let dx = player.x - player_pos.0;
+            let dy = player.y - player_pos.1;
 
             let screen_x = screen_width() / 2.0 + dx * config::TILE_SIZE;
             let screen_y = screen_height() / 2.0 + dy * config::TILE_SIZE;
@@ -658,28 +674,5 @@ impl GameState {
         let dx = (ox - px).abs();
         let dy = (oy - py).abs();
         dx <= half_w && dy <= half_h
-    }
-
-    pub fn interpolate(&mut self) {
-        let factor = 0.05;
-        let teleport_threshold = config::TILE_SIZE * 2.0;
-
-        fn smooth(v: &mut f32, target: f32, f: f32, threshold: f32) {
-            if (*v - target).abs() > threshold {
-                *v = target;
-            } else {
-                *v += (target - *v) * f;
-            }
-        }
-
-        for p in self.players.values_mut() {
-            smooth(&mut p.render_x, p.x, factor, teleport_threshold);
-            smooth(&mut p.render_y, p.y, factor, teleport_threshold);
-        }
-
-        for b in self.bullets.values_mut() {
-            smooth(&mut b.render_x, b.x, factor, teleport_threshold);
-            smooth(&mut b.render_y, b.y, factor, teleport_threshold);
-        }
     }
 }

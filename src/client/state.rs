@@ -30,8 +30,7 @@ impl ClientState {
         }
     }
 
-    pub fn update_state(&mut self, mut state: GameState) {
-        state.interpolate();
+    pub fn update_state(&mut self, state: GameState) {
         self.game_state = Some(Arc::new(state));
     }
 
@@ -44,7 +43,12 @@ impl ClientState {
                 gs.players.insert(id, player);
             }
             for id in state_diff.removed_players {
-                gs.players.remove(&id);
+                if id == self.id.unwrap() {
+                    continue;
+                }
+                if let Some(player) = gs.players.get_mut(&id) {
+                    player.to_render = true;
+                }
             }
 
             for (id, bullet) in state_diff.bullets {
