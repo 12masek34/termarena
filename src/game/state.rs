@@ -189,6 +189,11 @@ impl GameState {
             if id == pid {
                 continue;
             }
+            if !player.to_render {
+                diff.removed_players.push(id);
+                continue;
+            }
+
             if self.is_in_viewport(px, py, player.x, player.y, half_w, half_h) {
                 let changed = prev.map_or(true, |p| p.players.get(&id) != Some(player));
                 if changed {
@@ -417,6 +422,7 @@ impl GameState {
                     to_remove.push(bullet.id);
 
                     if player.health == 0 {
+                        player.to_render = false;
                         to_respawn.push(*player_id);
                         if let Some(owner) = self.players.get_mut(&bullet.owner_id) {
                             owner.kills += 1;
@@ -551,6 +557,7 @@ impl GameState {
             player.direction = Direction::Up;
             player.last_shot = Instant::now() - Duration::from_secs(5);
             player.deths += 1;
+            player.to_render = true;
         }
     }
 

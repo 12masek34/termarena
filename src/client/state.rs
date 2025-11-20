@@ -47,7 +47,7 @@ impl ClientState {
                     continue;
                 }
                 if let Some(player) = gs.players.get_mut(&id) {
-                    player.to_render = true;
+                    player.to_render = false;
                 }
             }
 
